@@ -1,0 +1,266 @@
+
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+
+{% block title %}Library Management{% endblock %}
+
+{% block content %}
+{{ page_header("Library Management", "Manage books, inventory and borrowing records.") }}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Book Titles</div>
+      <div class="h3 mb-0">{{ summary.titles }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Total Copies</div>
+      <div class="h3 mb-0">{{ summary.total_copies }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Available Copies</div>
+      <div class="h3 mb-0">{{ summary.available_copies }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Active / Overdue</div>
+      <div class="h3 mb-0">
+        {{ summary.active_issues }} / {{ summary.overdue_issues }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Currently Issued Copies</div>
+      <div class="h4 mb-0">{{ summary.issued_copies }}</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Recorded Fines</div>
+      <div class="h4 mb-0">₹{{ "%.2f"|format(summary.recorded_fines) }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="nx-card p-4 mb-4">
+  <h2 class="h5 mb-3">Add New Book</h2>
+
+  <form method="POST" action="{{ url_for('library.manage') }}" class="row g-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="add">
+
+    <div class="col-md-6">
+      <label class="form-label">Book Title</label>
+      <input class="form-control" name="title" maxlength="200" required>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Author</label>
+      <input class="form-control" name="author" maxlength="150" required>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">ISBN</label>
+      <input class="form-control" name="isbn" maxlength="20">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Category</label>
+      <input class="form-control" name="category" maxlength="80" required>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Shelf Location</label>
+      <input class="form-control" name="shelf_location" maxlength="40">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Total Copies</label>
+      <input class="form-control" type="number" name="total_copies"
+             min="1" max="65535" value="1" required>
+    </div>
+
+    <div class="col-md-5">
+      <label class="form-label">Publisher</label>
+      <input class="form-control" name="publisher" maxlength="120">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Publication Year</label>
+      <input class="form-control" type="number" name="publication_year"
+             min="1000" max="2100">
+    </div>
+
+    <div class="col-12">
+      <button class="btn btn-nx" type="submit">Add Book</button>
+    </div>
+  </form>
+</div>
+
+<div class="nx-card p-4 mb-4">
+  <h2 class="h5 mb-3">Book Catalogue</h2>
+
+  <form method="GET" action="{{ url_for('library.manage') }}" class="row g-2 mb-3">
+    <div class="col-md-9">
+      <input class="form-control" name="q" value="{{ search }}"
+             placeholder="Search title, author, ISBN or category">
+    </div>
+    <div class="col-md-3">
+      <button class="btn btn-outline-primary w-100" type="submit">Search</button>
+    </div>
+  </form>
+
+  {% if books %}
+  <div class="table-responsive">
+    <table class="table nx-table align-middle">
+      <thead>
+        <tr>
+          <th>Book</th>
+          <th>Category</th>
+          <th>ISBN</th>
+          <th>Copies</th>
+          <th>Available</th>
+          <th>Edit</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for book in books %}
+        <tr>
+          <td>
+            <strong>{{ book.title }}</strong>
+            <div class="small text-muted">{{ book.author }}</div>
+          </td>
+          <td>{{ book.category }}</td>
+          <td>{{ book.isbn or "—" }}</td>
+          <td>{{ book.total_copies }}</td>
+          <td>{{ book.available_copies }}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary"
+                    type="button" data-bs-toggle="collapse"
+                    data-bs-target="#book-edit-{{ book.id }}">
+              Edit
+            </button>
+          </td>
+        </tr>
+
+        <tr class="collapse" id="book-edit-{{ book.id }}">
+          <td colspan="6">
+            <form method="POST" action="{{ url_for('library.manage') }}"
+                  class="row g-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="edit">
+              <input type="hidden" name="book_id" value="{{ book.id }}">
+
+              <div class="col-md-4">
+                <label class="form-label">Title</label>
+                <input class="form-control" name="title"
+                       value="{{ book.title }}" maxlength="200" required>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Author</label>
+                <input class="form-control" name="author"
+                       value="{{ book.author }}" maxlength="150" required>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">ISBN</label>
+                <input class="form-control" name="isbn"
+                       value="{{ book.isbn or '' }}" maxlength="20">
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Category</label>
+                <input class="form-control" name="category"
+                       value="{{ book.category }}" maxlength="80" required>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Shelf Location</label>
+                <input class="form-control" name="shelf_location"
+                       value="{{ book.shelf_location or '' }}" maxlength="40">
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Total Copies</label>
+                <input class="form-control" type="number" name="total_copies"
+                       value="{{ book.total_copies }}" min="1" max="65535" required>
+                <small class="text-muted">{{ book.issued_copies }} currently issued</small>
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Publisher</label>
+                <input class="form-control" name="publisher"
+                       value="{{ book.publisher or '' }}" maxlength="120">
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Year</label>
+                <input class="form-control" type="number" name="publication_year"
+                       value="{{ book.publication_year or '' }}" min="1000" max="2100">
+              </div>
+
+              <div class="col-12">
+                <button class="btn btn-nx btn-sm" type="submit">Save Changes</button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state("bi-book", "No books found", "Add a book or change your search.") }}
+  {% endif %}
+</div>
+
+<div class="nx-card p-4">
+  <h2 class="h5 mb-3">Issue History</h2>
+
+  {% if issues %}
+  <div class="table-responsive">
+    <table class="table nx-table align-middle">
+      <thead>
+        <tr>
+          <th>Book</th>
+          <th>Student</th>
+          <th>Roll Number</th>
+          <th>Issued On</th>
+          <th>Due On</th>
+          <th>Returned</th>
+          <th>Fine</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for issue in issues %}
+        <tr>
+          <td>{{ issue.book_title }}</td>
+          <td>
+            {{ issue.student_name }}
+            <div class="small text-muted">{{ issue.student_email }}</div>
+          </td>
+          <td>{{ issue.roll_number or "—" }}</td>
+          <td>{{ issue.issued_on }}</td>
+          <td>{{ issue.due_on }}</td>
+          <td>{{ issue.returned_on or "Not returned" }}</td>
+          <td>₹{{ "%.2f"|format(issue.fine_amount) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state("bi-journal", "No issue records", "Issued books will appear here.") }}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block body_class %}nx-auth-body{% endblock %}
+{% block body %}
+<main id="main" class="nx-error">
+  <div class="nx-auth-card text-center">
+    <div class="nx-error-code">{{ code }}</div>
+    <h1 class="h4">{{ title }}</h1>
+    <p class="text-muted">{{ message }}</p>
+    <a class="btn btn-nx" href="{{ url_for('main.index') }}">Back to home</a>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, stat_card, empty_state, badge %}
+{% block title %}Fees{% endblock %}
+{% block content %}
+{{ page_header('Fee tracking', 'Records entered by the college administration. This page does not take payments.') }}
+{% set t = overview.totals %}
+{% if overview.records %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-receipt', 'Total assessed', t.assessed|money) }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-check2-circle', 'Confirmed payments', t.confirmed|money, 'teal') }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-wallet2', 'Outstanding balance', t.outstanding|money, 'amber') }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-hourglass-split', 'Awaiting confirmation', t.awaiting_confirmation|money, 'indigo') }}</div>
+</div>
+<p class="small text-muted">Outstanding = assessed − confirmed payments. Pending or failed transactions are shown but never counted as paid. Amounts are in the college's currency.</p>
+{% for r in overview.records %}
+<div class="nx-card mb-3">
+  <div class="nx-card-head">
+    <div><h2 class="h6 mb-0">{{ r.fee_name }}</h2><div class="small text-muted">{{ r.category }} · Academic year {{ r.year_label }}{% if r.semester_number %} · Semester {{ r.semester_number }}{% endif %}</div></div>
+    <div>{{ badge(r.status) }}</div>
+  </div>
+  <div class="p-3">
+    <div class="row g-2 text-center text-md-start">
+      <div class="col-6 col-md-3"><div class="small text-muted">Assessed</div><div class="fw-semibold">{{ r.amount_due|money }}</div></div>
+      <div class="col-6 col-md-3"><div class="small text-muted">Confirmed paid</div><div class="fw-semibold">{{ r.confirmed_paid|money }}</div></div>
+      <div class="col-6 col-md-3"><div class="small text-muted">Outstanding</div><div class="fw-semibold">{{ r.outstanding|money }}</div></div>
+      <div class="col-6 col-md-3"><div class="small text-muted">Due date</div><div class="fw-semibold">{{ r.due_date.strftime('%d %b %Y') }}</div></div>
+    </div>
+    {% if r.remarks %}<div class="mt-2 small"><span class="text-muted">Administrator remarks:</span> {{ r.remarks }}</div>{% endif %}
+  </div>
+  {% if r.transactions %}
+  <div class="table-responsive"><table class="table nx-table table-sm align-middle mb-0">
+    <thead><tr><th scope="col">Date</th><th scope="col">Method</th><th scope="col">Reference</th><th scope="col">Status</th><th scope="col" class="text-end">Amount</th></tr></thead>
+    <tbody>{% for x in r.transactions %}
+      <tr><td>{{ x.paid_on.strftime('%d %b %Y') }}</td><td class="text-capitalize">{{ x.method.replace('_', ' ') }}</td><td>{{ x.reference_no or '—' }}</td><td>{{ badge(x.status) }}</td><td class="text-end">{{ x.amount|money }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}<div class="px-3 pb-3 small text-muted">No payments recorded yet.</div>{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="nx-card">{{ empty_state('bi-wallet2', 'No fee records', 'No fees have been assessed for you yet.') }}</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, stat_card, empty_state, badge %}
+{% block title %}Results · {{ grid.assignment.subject_code }}{% endblock %}
+{% block content %}
+{% set a = grid.assignment %}
+{{ page_header('Results: ' ~ a.subject_code ~ ' · ' ~ a.subject_name, a.class_name ~ ' ' ~ a.section ~ ' · ' ~ a.semester_name ~ ' · ' ~ a.credits ~ ' credits') }}
+{% if not grid.scheme %}
+  <div class="alert alert-warning" role="alert">No default grading scheme is configured, so grades cannot be derived. Ask an administrator to configure one.</div>
+{% endif %}
+<div class="row g-3 mb-3">
+  <div class="col-sm-4">{{ stat_card('bi-pencil-square', 'Drafts', grid.drafts, 'amber') }}</div>
+  <div class="col-sm-4">{{ stat_card('bi-patch-check', 'Published', grid.published, 'teal') }}</div>
+  <div class="col-sm-4">{{ stat_card('bi-person-dash', 'Without a result', grid.without_result, 'indigo') }}</div>
+</div>
+<p class="small text-muted">Enter marks; the grade and grade points are worked out by the server from the grading scheme{% if grid.scheme %} “{{ grid.scheme.name }}”{% endif %}. Drafts are invisible to students; published results are official and can only be changed by an administrator.</p>
+<form method="post" action="{{ url_for('teacher.results_entry', assignment_id=a.id) }}" data-loading novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="nx-card mb-3">
+    {% if grid.students %}
+    <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+      <thead><tr><th scope="col">Roll no.</th><th scope="col">Student</th><th scope="col" class="nx-col-marks">Marks</th><th scope="col">Out of</th><th scope="col">Grade</th><th scope="col" class="text-end">Points</th><th scope="col">Status</th></tr></thead>
+      <tbody>{% for s in grid.students %}
+        {% set sub = submitted.get(s.id) %}{% set err = errors.get('marks.' ~ s.id) %}
+        <tr><td>{{ s.roll_number or '—' }}</td><td>{{ s.full_name }}</td>
+          <td><input type="text" inputmode="decimal" class="form-control form-control-sm {{ 'is-invalid' if err }}" name="marks_{{ s.id }}" aria-label="Marks for {{ s.full_name }}"
+              value="{{ sub.marks if sub else (s.marks_obtained if s.marks_obtained is not none else '') }}" {{ 'disabled' if s.is_published }}>
+            {% if err %}<div class="invalid-feedback d-block">{{ err }}</div>{% endif %}</td>
+          <td><input type="text" inputmode="decimal" class="form-control form-control-sm" name="max_{{ s.id }}" aria-label="Maximum marks" size="5"
+              value="{{ sub.max if sub else (s.max_marks if s.max_marks is not none else 100) }}" {{ 'disabled' if s.is_published }}></td>
+          <td>{{ s.grade_label or '—' }}</td><td class="text-end">{{ s.grade_point if s.grade_point is not none else '—' }}</td>
+          <td>{% if s.grade_label %}{{ badge('Published' if s.is_published else 'Draft') }}{% else %}<span class="text-muted">—</span>{% endif %}</td></tr>
+      {% endfor %}</tbody></table></div>
+    {% else %}{{ empty_state('bi-people', 'No students', 'Nobody is enrolled in this class yet.') }}{% endif %}
+  </div>
+  {% if grid.students and grid.scheme %}
+  <div class="d-flex gap-2 flex-wrap">
+    <button type="submit" name="action" value="save" class="btn btn-nx"><span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span><span class="nx-btn-label">Save as draft</span></button>
+    {% if grid.can_publish %}<button type="submit" name="action" value="publish" class="btn btn-outline-success" data-confirm="Publish all draft results for this class? Students will see them and you cannot edit them afterwards.">Save and publish drafts</button>{% endif %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('teacher.results_export', assignment_id=a.id) }}"><i class="bi bi-download me-1"></i>Export CSV</a>
+  </div>
+  {% endif %}
+</form>
+{% endblock %}

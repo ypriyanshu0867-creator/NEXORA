@@ -1,0 +1,72 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state, badge %}
+{% block title %}{{ d.subject.code }} syllabus{% endblock %}
+{% block content %}
+{{ page_header(d.subject.code ~ ' · ' ~ d.subject.name, 'Semester ' ~ d.subject.semester_number ~ ' — units and materials') }}
+<p><a href="{{ url_for('teacher.syllabus') }}" class="small"><i class="bi bi-arrow-left"></i> All subjects</a></p>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="nx-card mb-4">
+      <div class="nx-card-head"><h2 class="h6 mb-0">Units</h2></div>
+      {% if d.units %}<ul class="list-group list-group-flush">{% for u in d.units %}
+        <li class="list-group-item"><div class="d-flex justify-content-between flex-wrap gap-2">
+          <div><span class="fw-semibold">Unit {{ u.unit_number }}: {{ u.title }}</span> {{ badge('Visible' if u.is_published else 'Hidden') }}
+            <div class="small text-muted nx-prewrap">{{ u.topics[:160] }}{{ '…' if u.topics|length > 160 }}</div></div>
+          <div class="d-flex gap-1 align-items-start">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('teacher.syllabus_subject', subject_id=d.subject.id, edit=u.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('teacher.unit_publish', unit_id=u.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="publish" value="{{ '0' if u.is_published else '1' }}"><button class="btn btn-sm btn-outline-secondary" type="submit">{{ 'Hide' if u.is_published else 'Publish' }}</button></form>
+          </div></div></li>{% endfor %}</ul>
+      {% else %}{{ empty_state('bi-journal-plus', 'No units yet', 'Add the first unit with the form.') }}{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('teacher.save_unit', subject_id=d.subject.id) }}" class="nx-card p-3 p-md-4 mb-4" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="unit_id" value="{{ editing.id if editing and editing.id else '' }}">
+      <h2 class="h6">{{ 'Edit unit' if editing else 'Add a unit' }}</h2>
+      <div class="row g-2">
+        <div class="col-4"><label for="unit_number" class="form-label">Unit no.</label><input type="number" min="1" max="30" class="form-control {{ 'is-invalid' if errors.unit_number }}" id="unit_number" name="unit_number" value="{{ editing.unit_number if editing else '' }}" required><div class="invalid-feedback">{{ errors.unit_number }}</div></div>
+        <div class="col-8"><label for="title" class="form-label">Title</label><input type="text" maxlength="150" class="form-control {{ 'is-invalid' if errors.title }}" id="title" name="title" value="{{ editing.title if editing else '' }}" required><div class="invalid-feedback">{{ errors.title }}</div></div>
+        <div class="col-12"><label for="topics" class="form-label">Description / topics</label><textarea class="form-control {{ 'is-invalid' if errors.topics }}" id="topics" name="topics" rows="3" maxlength="5000" required>{{ editing.topics if editing else '' }}</textarea><div class="invalid-feedback">{{ errors.topics }}</div></div>
+        <div class="col-4"><label for="lecture_hours" class="form-label">Hours</label><input type="number" min="0" max="255" class="form-control {{ 'is-invalid' if errors.lecture_hours }}" id="lecture_hours" name="lecture_hours" value="{{ editing.lecture_hours if editing and editing.lecture_hours is not none else '' }}"><div class="invalid-feedback">{{ errors.lecture_hours }}</div></div>
+        <div class="col-12"><label for="learning_outcomes" class="form-label">Learning outcomes</label><textarea class="form-control" id="learning_outcomes" name="learning_outcomes" rows="2" maxlength="3000">{{ editing.learning_outcomes if editing and editing.learning_outcomes else '' }}</textarea></div>
+        <div class="col-12"><label for="reference_books" class="form-label">Reference materials</label><textarea class="form-control" id="reference_books" name="reference_books" rows="2" maxlength="2000">{{ editing.reference_books if editing and editing.reference_books else '' }}</textarea></div>
+        <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" id="is_published" name="is_published" value="1" {{ 'checked' if (not editing) or editing.is_published in (1, True, '1') }}><label class="form-check-label" for="is_published">Visible to students</label></div></div>
+      </div>
+      <button class="btn btn-nx mt-3" type="submit">Save unit</button>
+      {% if editing %}<a class="btn btn-outline-secondary mt-3" href="{{ url_for('teacher.syllabus_subject', subject_id=d.subject.id) }}">Cancel</a>{% endif %}
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="nx-card mb-4">
+      <div class="nx-card-head"><h2 class="h6 mb-0">Learning materials</h2></div>
+      {% if d.materials %}<ul class="list-group list-group-flush">{% for m in d.materials %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between"><span class="fw-semibold"><i class="bi bi-file-earmark-pdf text-danger me-1"></i>{{ m.title }}</span>{{ badge('Visible' if m.is_published else 'Hidden') }}</div>
+          <div class="small text-muted">{{ (m.size_bytes / 1024)|round(0)|int }} KB · {{ m.uploaded_at.strftime('%d %b %Y') }}{% if m.uploader %} · {{ m.uploader }}{% endif %}</div>
+          <form method="post" action="{{ url_for('teacher.update_material', material_id=m.id) }}" class="row g-1 mt-1">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-12"><input class="form-control form-control-sm" name="title" value="{{ m.title }}" maxlength="150" aria-label="Title"></div>
+            <div class="col-12"><input class="form-control form-control-sm" name="description" value="{{ m.description or '' }}" maxlength="255" placeholder="Description" aria-label="Description"></div>
+            <div class="col-12 d-flex gap-1"><button class="btn btn-sm btn-outline-secondary" type="submit">Update</button>
+              <button class="btn btn-sm btn-outline-secondary" type="submit" formaction="{{ url_for('teacher.material_publish', material_id=m.id) }}" name="publish" value="{{ '0' if m.is_published else '1' }}">{{ 'Hide' if m.is_published else 'Publish' }}</button></div>
+          </form></li>{% endfor %}</ul>
+      {% else %}{{ empty_state('bi-file-earmark-pdf', 'No materials', 'Upload a PDF below.') }}{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('teacher.upload_material', subject_id=d.subject.id) }}" enctype="multipart/form-data" class="nx-card p-3 p-md-4 mb-4" data-loading>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="h6">Upload a PDF</h2>
+      <div class="mb-2"><label for="mtitle" class="form-label">Title</label><input class="form-control" id="mtitle" name="title" maxlength="150" required></div>
+      <div class="mb-2"><label for="mdesc" class="form-label">Description</label><input class="form-control" id="mdesc" name="description" maxlength="255"></div>
+      <div class="mb-2"><label for="mfile" class="form-label">PDF file (max {{ (config.MATERIAL_MAX_BYTES / 1048576)|int }} MB)</label><input class="form-control" type="file" id="mfile" name="file" accept="application/pdf,.pdf" required></div>
+      <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="mpub" name="publish" value="1" checked><label class="form-check-label" for="mpub">Publish to students now</label></div>
+      <button class="btn btn-nx" type="submit"><span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span><span class="nx-btn-label">Upload</span></button>
+    </form>
+    <div class="nx-card">
+      <div class="nx-card-head"><h2 class="h6 mb-0">Publication history</h2></div>
+      {% if d.history %}<ul class="list-group list-group-flush small">{% for h in d.history %}
+        <li class="list-group-item d-flex justify-content-between"><span>{{ h.action.replace('.', ' · ') }} <span class="text-muted">by {{ h.actor or 'system' }}</span></span><span class="text-muted">{{ h.created_at.strftime('%d %b %H:%M') }}</span></li>{% endfor %}</ul>
+      {% else %}{{ empty_state('bi-clock-history', 'No history', 'Publication changes are listed here.') }}{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

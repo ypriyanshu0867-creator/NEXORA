@@ -1,0 +1,20 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state, badge %}
+{% block title %}My Notices{% endblock %}
+{% block content %}
+{{ page_header('My notices', 'Announcements to your own classes. Drafts and withdrawn notices are never shown to students.') }}
+<p class="d-flex gap-2 flex-wrap"><a class="btn btn-nx" href="{{ url_for('teacher.notice_form') }}"><i class="bi bi-plus-lg me-1"></i>New notice</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('notices.index') }}"><i class="bi bi-eye me-1"></i>Notice board</a></p>
+<div class="nx-card">
+{% if own %}<div class="table-responsive"><table class="table nx-table align-middle mb-0">
+  <thead><tr><th scope="col">Title</th><th scope="col">Category</th><th scope="col">Class</th><th scope="col">Status</th><th scope="col">Expires</th><th scope="col" class="text-end">Actions</th></tr></thead>
+  <tbody>{% for n in own %}<tr><td class="fw-semibold">{{ n.title }}{% if n.has_attachment %} <i class="bi bi-paperclip" title="Attachment"></i>{% endif %}</td>
+    <td class="text-capitalize">{{ n.category }}</td><td>{{ (n.class_name ~ ' ' ~ n.section) if n.class_name else '—' }}{% if n.semester_number %} · Sem {{ n.semester_number }}{% endif %}</td>
+    <td>{{ badge('Published' if n.is_active else 'Draft') }}</td><td>{{ n.expires_at.strftime('%d %b %Y') if n.expires_at else '—' }}</td>
+    <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('teacher.notice_form', notice_id=n.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('teacher.notice_publish', notice_id=n.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="publish" value="{{ '0' if n.is_active else '1' }}">
+        <button class="btn btn-sm {{ 'btn-outline-danger' if n.is_active else 'btn-outline-success' }}" type="submit" data-confirm="{{ 'Withdraw this notice? Students will no longer see it.' if n.is_active else 'Publish this notice to students now?' }}">{{ 'Withdraw' if n.is_active else 'Publish' }}</button></form></td></tr>{% endfor %}</tbody></table></div>
+{% else %}{{ empty_state('bi-megaphone', 'No notices yet', 'Create your first class announcement.') }}{% endif %}
+</div>
+{% endblock %}

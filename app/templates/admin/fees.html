@@ -1,0 +1,409 @@
+
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+
+{% block title %}Fees Management{% endblock %}
+
+{% block content %}
+{{ page_header("Fees Management", "Manage fee structures, student dues and payment records.") }}
+
+<!-- Dashboard Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Fee Structures</div>
+      <div class="h3 mb-0">{{ summary.structure_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Total Assessed</div>
+      <div class="h4 mb-0">₹{{ "%.2f"|format(summary.assessed) }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Confirmed Collection</div>
+      <div class="h4 mb-0">₹{{ "%.2f"|format(summary.confirmed) }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="nx-card p-3 h-100">
+      <div class="text-muted small">Outstanding</div>
+      <div class="h4 mb-0">₹{{ "%.2f"|format(summary.outstanding) }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="nx-card p-3">
+      <div class="text-muted small">Pending Confirmations</div>
+      <div class="h4 mb-0">₹{{ "%.2f"|format(summary.pending) }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="nx-card p-3">
+      <div class="text-muted small">Failed Payments</div>
+      <div class="h4 mb-0">₹{{ "%.2f"|format(summary.failed) }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="nx-card p-3">
+      <div class="text-muted small">Overdue Fee Records</div>
+      <div class="h4 mb-0">{{ summary.overdue_count }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Fee Structure -->
+<div class="nx-card p-4 mb-4">
+  <h2 class="h5 mb-3">Create Fee Structure</h2>
+
+  <form method="POST" action="{{ url_for('fees.manage') }}"
+        class="row g-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="create_structure">
+
+    <div class="col-md-6">
+      <label class="form-label">Fee Name</label>
+      <input class="form-control" name="name" maxlength="120"
+             placeholder="e.g. Tuition Fee - Semester 3" required>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Category</label>
+      <select class="form-select" name="category" required>
+        <option value="Tuition">Tuition</option>
+        <option value="Examination">Examination</option>
+        <option value="Library">Library</option>
+        <option value="Hostel">Hostel</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Total Amount (₹)</label>
+      <input class="form-control" type="number" name="total_amount"
+             min="0.01" max="99999999.99" step="0.01" required>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Department</label>
+      <select class="form-select" name="department_id">
+        <option value="">All Departments</option>
+        {% for department in departments %}
+        <option value="{{ department.id }}">{{ department.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Academic Year</label>
+      <select class="form-select" name="academic_year_id" required>
+        <option value="">Select Academic Year</option>
+        {% for year in academic_years %}
+        <option value="{{ year.id }}" {% if year.is_current %}selected{% endif %}>
+          {{ year.label }}{% if year.is_current %} (Current){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Semester</label>
+      <select class="form-select" name="semester_number">
+        <option value="">N/A</option>
+        {% for semester in range(1, 9) %}
+        <option value="{{ semester }}">{{ semester }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Due Date</label>
+      <input class="form-control" type="date" name="due_date" required>
+    </div>
+
+    <div class="col-12">
+      <button class="btn btn-nx" type="submit">Create Fee Structure</button>
+    </div>
+  </form>
+</div>
+
+<!-- Assign Fee -->
+<div class="nx-card p-4 mb-4">
+  <h2 class="h5 mb-3">Assign Fee to Student</h2>
+
+  <form method="POST" action="{{ url_for('fees.manage') }}"
+        class="row g-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="assign_fee">
+
+    <div class="col-md-6">
+      <label class="form-label">Fee Structure</label>
+      <select class="form-select" name="structure_id" required>
+        <option value="">Select Fee Structure</option>
+        {% for structure in structures %}
+        <option value="{{ structure.id }}">
+          {{ structure.name }} — ₹{{ "%.2f"|format(structure.total_amount) }}
+          ({{ structure.year_label }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Active Student</label>
+      <select class="form-select" name="student_id" required>
+        <option value="">Select Student</option>
+        {% for student in students %}
+        <option value="{{ student.id }}">
+          {{ student.full_name }} — {{ student.roll_number or student.email }}
+          ({{ student.department_name or "No Department" }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-12">
+      <button class="btn btn-nx" type="submit">Assign Fee</button>
+    </div>
+  </form>
+</div>
+
+<!-- Record Payment -->
+<div class="nx-card p-4 mb-4">
+  <h2 class="h5 mb-3">Record Student Payment</h2>
+
+  <form method="POST" action="{{ url_for('fees.manage') }}"
+        class="row g-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="add_payment">
+
+    <div class="col-md-6">
+      <label class="form-label">Student Fee Record</label>
+      <select class="form-select" name="fee_record_id" required>
+        <option value="">Select Student Fee Record</option>
+        {% for record in records %}
+          {% if record.status != "waived" %}
+          <option value="{{ record.id }}">
+            {{ record.student_name }} — {{ record.fee_name }}
+            (Remaining ₹{{ "%.2f"|format(record.amount_due - record.confirmed_paid) }})
+          </option>
+          {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Amount (₹)</label>
+      <input class="form-control" type="number" name="amount"
+             min="0.01" step="0.01" required>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Payment Date</label>
+      <input class="form-control" type="date" name="paid_on"
+             value="{{ today if today else '' }}" required>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Payment Method</label>
+      <select class="form-select" name="method" required>
+        <option value="cash">Cash</option>
+        <option value="bank_transfer">Bank Transfer</option>
+        <option value="cheque">Cheque</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Reference Number</label>
+      <input class="form-control" name="reference_no" maxlength="60">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Initial Status</label>
+      <select class="form-select" name="status" required>
+        <option value="pending" selected>Pending Verification</option>
+        <option value="confirmed">Confirmed</option>
+      </select>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Note</label>
+      <input class="form-control" name="note" maxlength="255">
+    </div>
+
+    <div class="col-12">
+      <button class="btn btn-nx" type="submit">Record Payment</button>
+    </div>
+  </form>
+</div>
+
+<!-- Student Fee Records -->
+<div class="nx-card p-4 mb-4">
+  <h2 class="h5 mb-3">Student Fee Records</h2>
+
+  <form method="GET" action="{{ url_for('fees.manage') }}"
+        class="row g-2 mb-3">
+    <div class="col-md-7">
+      <input class="form-control" name="q" value="{{ search }}"
+             placeholder="Search student, roll number or fee">
+    </div>
+
+    <div class="col-md-3">
+      <select class="form-select" name="status">
+        <option value="">All Statuses</option>
+        {% for value in ["unpaid", "partial", "paid", "waived"] %}
+        <option value="{{ value }}"
+                {% if selected_status == value %}selected{% endif %}>
+          {{ value|capitalize }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <button class="btn btn-outline-primary w-100" type="submit">
+        Filter
+      </button>
+    </div>
+  </form>
+
+  {% if records %}
+  <div class="table-responsive">
+    <table class="table nx-table align-middle">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Fee</th>
+          <th>Due Date</th>
+          <th>Amount Due</th>
+          <th>Confirmed</th>
+          <th>Balance</th>
+          <th>Status</th>
+          <th>Waive</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+        <tr>
+          <td>
+            <strong>{{ record.student_name }}</strong>
+            <div class="small text-muted">{{ record.roll_number or record.email }}</div>
+          </td>
+          <td>{{ record.fee_name }}</td>
+          <td>{{ record.due_date }}</td>
+          <td>₹{{ "%.2f"|format(record.amount_due) }}</td>
+          <td>₹{{ "%.2f"|format(record.confirmed_paid) }}</td>
+          <td>
+            ₹{{ "%.2f"|format(
+              0 if record.status == "waived"
+              else [record.amount_due - record.confirmed_paid, 0]|max
+            ) }}
+          </td>
+          <td>
+            {% if record.status == "paid" %}
+              <span class="badge bg-success">Paid</span>
+            {% elif record.status == "partial" %}
+              <span class="badge bg-info">Partial</span>
+            {% elif record.status == "waived" %}
+              <span class="badge bg-secondary">Waived</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Unpaid</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if record.status != "waived" %}
+            <form method="POST" action="{{ url_for('fees.manage') }}"
+                  class="d-flex flex-column gap-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="waive_fee">
+              <input type="hidden" name="record_id" value="{{ record.id }}">
+              <input class="form-control form-control-sm" name="remarks"
+                     maxlength="255" placeholder="Waiver reason" required>
+              <button class="btn btn-sm btn-outline-warning" type="submit">
+                Waive
+              </button>
+            </form>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state("bi-wallet2", "No fee records found", "Assign a fee to a student to get started.") }}
+  {% endif %}
+</div>
+
+<!-- Payment Transactions -->
+<div class="nx-card p-4 mb-4">
+  <h2 class="h5 mb-3">Payment Transactions</h2>
+
+  {% if transactions %}
+  <div class="table-responsive">
+    <table class="table nx-table align-middle">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Fee</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Reference</th>
+          <th>Paid On</th>
+          <th>Recorded By</th>
+          <th>Status / Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for payment in transactions %}
+        <tr>
+          <td>
+            {{ payment.student_name }}
+            <div class="small text-muted">{{ payment.roll_number or "—" }}</div>
+          </td>
+          <td>{{ payment.fee_name }}</td>
+          <td>₹{{ "%.2f"|format(payment.amount) }}</td>
+          <td>{{ payment.method|replace("_", " ")|title }}</td>
+          <td>{{ payment.reference_no or "—" }}</td>
+          <td>{{ payment.paid_on }}</td>
+          <td>{{ payment.recorded_by_name or "—" }}</td>
+          <td>
+            {% if payment.status == "pending" %}
+            <form method="POST" action="{{ url_for('fees.manage') }}"
+                  class="d-flex flex-wrap gap-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="review_payment">
+              <input type="hidden" name="transaction_id" value="{{ payment.id }}">
+              <button class="btn btn-sm btn-outline-success"
+                      name="new_status" value="confirmed" type="submit">
+                Confirm
+              </button>
+              <button class="btn btn-sm btn-outline-danger"
+                      name="new_status" value="failed" type="submit">
+                Reject
+              </button>
+            </form>
+            {% elif payment.status == "confirmed" %}
+              <span class="badge bg-success">Confirmed</span>
+            {% else %}
+              <span class="badge bg-danger">Failed</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state("bi-receipt", "No transactions found", "Payment entries will appear here.") }}
+  {% endif %}
+</div>
+
+{% endblock %}

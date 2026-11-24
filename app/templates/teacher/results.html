@@ -1,0 +1,14 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+{% block title %}Results{% endblock %}
+{% block content %}
+{{ page_header('Academic results', 'Pick one of your classes to enter, edit (drafts) or publish marks.') }}
+<div class="nx-card">
+{% if assignments %}<div class="table-responsive"><table class="table nx-table align-middle mb-0">
+  <thead><tr><th scope="col">Subject</th><th scope="col">Class</th><th scope="col">Semester</th><th scope="col" class="text-end">Students</th><th scope="col" class="text-end">Open</th></tr></thead>
+  <tbody>{% for a in assignments %}<tr><td><span class="fw-semibold">{{ a.subject_code }}</span> · {{ a.subject_name }}</td><td>{{ a.class_name }} {{ a.section }}</td>
+    <td>{{ a.semester_name }}{% if a.is_current %} <span class="badge text-bg-success">Current</span>{% endif %}</td><td class="text-end">{{ a.enrolled }}</td>
+    <td class="text-end"><a class="btn btn-sm btn-nx" href="{{ url_for('teacher.results_entry', assignment_id=a.id) }}">Results</a></td></tr>{% endfor %}</tbody></table></div>
+{% else %}{{ empty_state('bi-mortarboard', 'No assignments', 'You have no subject assignments to enter results for.') }}{% endif %}
+</div>
+{% endblock %}

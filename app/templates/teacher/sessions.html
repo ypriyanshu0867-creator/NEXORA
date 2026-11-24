@@ -1,0 +1,31 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state, badge, pagination %}
+{% block title %}Session History{% endblock %}
+{% block content %}
+{{ page_header('Attendance session history', 'Your sessions, with filters. Open one to see its records or correct attendance.') }}
+<form class="nx-card p-3 mb-3" method="get" action="{{ url_for('teacher.sessions') }}">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4"><label for="assignment_id" class="form-label">Subject and class</label>
+      <select class="form-select" id="assignment_id" name="assignment_id"><option value="">All</option>
+        {% for a in assignments %}<option value="{{ a.id }}" {{ 'selected' if f.assignment_id == a.id|string }}>{{ a.subject_code }} · {{ a.class_name }} {{ a.section }} ({{ a.semester_name }})</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label for="state" class="form-label">State</label>
+      <select class="form-select" id="state" name="state"><option value="">Any</option><option value="active" {{ 'selected' if f.state == 'active' }}>Active</option><option value="closed" {{ 'selected' if f.state == 'closed' }}>Finished</option></select></div>
+    <div class="col-6 col-md-2"><label for="from" class="form-label">From</label><input type="date" class="form-control" id="from" name="from" value="{{ f['from'] }}"></div>
+    <div class="col-6 col-md-2"><label for="to" class="form-label">To</label><input type="date" class="form-control" id="to" name="to" value="{{ f.to }}"></div>
+    <div class="col-md-2 d-grid"><button class="btn btn-nx" type="submit"><i class="bi bi-funnel me-1"></i>Filter</button></div>
+  </div>
+</form>
+<div class="nx-card">
+  <div class="nx-card-head"><span class="small text-muted">{{ result.total }} session(s)</span><a class="btn btn-sm btn-nx" href="{{ url_for('attendance.teacher_sessions') }}">Start a session</a></div>
+  {% if result['items'] %}
+  <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+    <thead><tr><th scope="col">Started (UTC)</th><th scope="col">Subject</th><th scope="col">Class</th><th scope="col">Semester</th><th scope="col">Classroom</th><th scope="col">Geofence</th><th scope="col">State</th><th scope="col" class="text-end">Present</th></tr></thead>
+    <tbody>{% for s in result['items'] %}
+      <tr><td><a href="{{ url_for('teacher.session_detail', session_id=s.id) }}">{{ s.started_at.strftime('%d %b %Y %H:%M') }}</a></td><td>{{ s.subject_code }}</td><td>{{ s.class_name }} {{ s.section }}</td>
+        <td>{{ s.semester_name }}</td><td>{{ s.classroom or '—' }}</td><td>{{ (s.geo_radius_m ~ ' m') if s.geofence_enabled else 'Off' }}</td>
+        <td>{{ badge(s.state|capitalize) }}</td><td class="text-end">{{ s.present }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {{ pagination(result.page, result.pages) }}
+  {% else %}{{ empty_state('bi-calendar-x', 'No sessions found', 'No sessions match these filters.') }}{% endif %}
+</div>
+{% endblock %}

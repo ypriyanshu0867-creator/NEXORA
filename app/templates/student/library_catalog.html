@@ -1,0 +1,32 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state, badge, pagination %}
+{% block title %}Library{% endblock %}
+{% block content %}
+{{ page_header('Library catalogue', 'Search the college library. Availability is read from the library records; this page does not reserve or issue books.') }}
+{% if current_user.role == 'student' %}<p><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('library.my_books') }}"><i class="bi bi-bookmark-check me-1"></i>My issued books</a></p>{% endif %}
+<form class="nx-card p-3 mb-3" method="get" action="{{ url_for('library.catalog') }}">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-5"><label for="q" class="form-label">Title, author or ISBN</label>
+      <input type="search" class="form-control" id="q" name="q" value="{{ q }}" maxlength="100"></div>
+    <div class="col-md-3"><label for="category" class="form-label">Category</label>
+      <select class="form-select" id="category" name="category"><option value="">All categories</option>
+        {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c == category }}>{{ c }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="available" name="available" value="1" {{ 'checked' if only_available }}><label class="form-check-label" for="available">Available only</label></div></div>
+    <div class="col-md-2 d-grid"><button class="btn btn-nx" type="submit"><i class="bi bi-search me-1"></i>Search</button></div>
+  </div>
+</form>
+<div class="nx-card">
+  <div class="nx-card-head"><span class="small text-muted">{{ result.total }} book(s) found</span></div>
+  {% if result['items'] %}
+  <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+    <thead><tr><th scope="col">Title</th><th scope="col">Author</th><th scope="col">Category</th><th scope="col">Shelf</th><th scope="col">Copies</th><th scope="col">Status</th></tr></thead>
+    <tbody>{% for b in result['items'] %}
+      <tr><td><a class="fw-semibold" href="{{ url_for('library.book', book_id=b.id) }}">{{ b.title }}</a>{% if b.isbn %}<div class="small text-muted">ISBN {{ b.isbn }}</div>{% endif %}</td>
+        <td>{{ b.author }}</td><td>{{ b.category }}</td><td>{{ b.shelf_location or '—' }}</td>
+        <td>{{ b.available_copies }} / {{ b.total_copies }}</td>
+        <td>{% if b.available_copies > 0 %}<span class="badge text-bg-success">Available</span>{% else %}<span class="badge text-bg-secondary">All issued</span>{% endif %}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {{ pagination(result.page, result.pages) }}
+  {% else %}{{ empty_state('bi-book', 'No books found', 'Try a different title, author, ISBN or category.') }}{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state, badge, stat_card %}
+{% block title %}My Books{% endblock %}
+{% block content %}
+{{ page_header('My library books', 'Your own issue records. Issuing, returns and fines are handled by the library staff.') }}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-book', 'Currently issued', issues.current|length) }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-exclamation-triangle', 'Overdue', issues.overdue_count, 'amber') }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-cash-coin', 'Fines on record', issues.total_fines|money, 'indigo') }}</div>
+</div>
+{% if not issues.fines_configured %}<p class="small text-muted">Overdue fines are not automatically calculated on this system; amounts shown are those recorded by the library.</p>{% endif %}
+<div class="nx-card mb-4">
+  <div class="nx-card-head"><h2 class="h6 mb-0">Currently issued</h2></div>
+  {% if issues.current %}
+  <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+    <thead><tr><th scope="col">Book</th><th scope="col">Issued</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col" class="text-end">Fine</th></tr></thead>
+    <tbody>{% for i in issues.current %}
+      <tr><td><a href="{{ url_for('library.book', book_id=i.book_id) }}" class="fw-semibold">{{ i.title }}</a><div class="small text-muted">{{ i.author }}</div></td>
+        <td>{{ i.issued_on.strftime('%d %b %Y') }}</td><td>{{ i.due_on.strftime('%d %b %Y') }}</td>
+        <td>{{ badge(i.status) }}{% if i.days_overdue %} <span class="small text-danger">{{ i.days_overdue }} day(s) late</span>{% endif %}</td>
+        <td class="text-end">{{ i.fine|money }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty_state('bi-book', 'No books issued', 'You have no books on loan.') }}{% endif %}
+</div>
+<div class="nx-card">
+  <div class="nx-card-head"><h2 class="h6 mb-0">Borrowing history</h2></div>
+  {% if issues.returned %}
+  <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+    <thead><tr><th scope="col">Book</th><th scope="col">Issued</th><th scope="col">Due</th><th scope="col">Returned</th><th scope="col" class="text-end">Fine</th></tr></thead>
+    <tbody>{% for i in issues.returned %}
+      <tr><td>{{ i.title }}</td><td>{{ i.issued_on.strftime('%d %b %Y') }}</td><td>{{ i.due_on.strftime('%d %b %Y') }}</td>
+        <td>{{ i.returned_on.strftime('%d %b %Y') }}{% if i.days_overdue %} <span class="small text-danger">({{ i.days_overdue }} late)</span>{% endif %}</td><td class="text-end">{{ i.fine|money }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty_state('bi-clock-history', 'No history yet', 'Returned books will be listed here.') }}{% endif %}
+</div>
+{% endblock %}

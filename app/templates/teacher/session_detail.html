@@ -1,0 +1,38 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state, badge %}
+{% block title %}Session {{ r.session.id }}{% endblock %}
+{% block content %}
+{% set s = r.session %}
+{{ page_header(s.subject_code ~ ' · ' ~ s.subject_name, s.class_name ~ ' ' ~ s.section ~ ' · started ' ~ s.started_at.strftime('%d %b %Y %H:%M') ~ ' UTC') }}
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('teacher.sessions') }}">Back to history</a>
+  <a class="btn btn-outline-secondary btn-sm" href="/api/teacher/attendance?session_id={{ s.id }}&amp;format=csv"><i class="bi bi-download me-1"></i>Export CSV</a>
+</div>
+{% if not s.finished %}<div class="alert alert-info">This session is still running. Close it first; then you can correct attendance.</div>{% endif %}
+<div class="nx-card mb-4">
+  <div class="nx-card-head"><h2 class="h6 mb-0">Students</h2><span class="small text-muted">Corrections need a written reason and are audited.</span></div>
+  <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+    <thead><tr><th scope="col">Roll no.</th><th scope="col">Student</th><th scope="col">Status</th><th scope="col">Marked (UTC)</th>{% if s.finished %}<th scope="col">Correct attendance</th>{% endif %}</tr></thead>
+    <tbody>{% for st in r.students %}
+      <tr><td>{{ st.roll_number or '—' }}</td><td>{{ st.full_name }}</td>
+        <td>{{ badge('Present' if st.present else 'Absent') }}{% if st.source == 'correction' %} <span class="small text-muted">(corrected)</span>{% endif %}</td>
+        <td>{{ st.marked_at.strftime('%H:%M:%S') if st.marked_at else '—' }}</td>
+        {% if s.finished %}<td>
+          <form method="post" action="{{ url_for('teacher.correct', session_id=s.id) }}" class="d-flex gap-2 flex-wrap">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="student_id" value="{{ st.id }}">
+            <input type="hidden" name="present" value="{{ '0' if st.present else '1' }}">
+            <input type="text" name="reason" class="form-control form-control-sm w-auto" placeholder="Reason (required)" required minlength="5" maxlength="255" aria-label="Reason for correction">
+            <button type="submit" class="btn btn-sm {{ 'btn-outline-danger' if st.present else 'btn-outline-success' }}" data-confirm="Record this correction for {{ st.full_name }}? It will be audited.">{{ 'Mark absent' if st.present else 'Mark present' }}</button>
+          </form></td>{% endif %}</tr>
+    {% else %}<tr><td colspan="5">{{ empty_state('bi-people', 'No students', 'Nobody is enrolled in this class.') }}</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+<div class="nx-card">
+  <div class="nx-card-head"><h2 class="h6 mb-0">Correction history</h2></div>
+  {% if r.history %}<div class="table-responsive"><table class="table nx-table table-sm mb-0">
+    <thead><tr><th scope="col">When (UTC)</th><th scope="col">Student</th><th scope="col">Change</th><th scope="col">Reason</th><th scope="col">By</th></tr></thead>
+    <tbody>{% for h in r.history %}<tr><td>{{ h.corrected_at.strftime('%d %b %Y %H:%M') }}</td><td>{{ h.student }}</td>
+      <td>{{ 'Present' if h.previous_present else 'Absent' }} → {{ 'Present' if h.new_present else 'Absent' }}</td><td>{{ h.reason }}</td><td>{{ h.teacher }}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{{ empty_state('bi-clipboard-check', 'No corrections', 'Attendance for this session has not been corrected.') }}{% endif %}
+</div>
+{% endblock %}

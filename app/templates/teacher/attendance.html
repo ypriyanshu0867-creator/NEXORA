@@ -1,0 +1,149 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+{% block title %}Attendance Sessions{% endblock %}
+{% block content %}
+{{ page_header('Attendance sessions', 'Start a session, show the QR code, and watch students check in.') }}
+
+<div id="attendanceApp">
+  <!-- ============ Start form ============ -->
+  <section class="nx-card mb-4" id="startPanel">
+    <div class="nx-card-head"><h2 class="h6 mb-0">Start a session</h2></div>
+    <div class="p-3 p-md-4">
+    {% if not assignments %}
+      {{ empty_state('bi-journal-x', 'No current assignments', 'You have no subject and class assigned for the current semester. Ask an administrator.') }}
+    {% else %}
+    <form id="startForm" novalidate>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="assignment_id" class="form-label">Subject and class</label>
+          <select class="form-select" id="assignment_id" required>
+            {% for a in assignments %}
+              <option value="{{ a.assignment_id }}">{{ a.subject_code }} · {{ a.subject_name }} — {{ a.class_name }} {{ a.section }}</option>
+            {% endfor %}
+          </select>
+          <div class="invalid-feedback" data-error-for="assignment_id"></div>
+        </div>
+        <div class="col-md-6">
+          <label for="classroom_id" class="form-label">Classroom</label>
+          <select class="form-select" id="classroom_id">
+            <option value="">No preset (enter coordinates)</option>
+            {% for r in classrooms %}
+              <option value="{{ r.id }}" data-lat="{{ r.latitude }}" data-lng="{{ r.longitude }}" data-radius="{{ r.default_radius_m }}">{{ r.name }}{% if r.building %} · {{ r.building }}{% endif %}</option>
+            {% endfor %}
+          </select>
+          <div class="invalid-feedback" data-error-for="classroom_id"></div>
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="qr_validity_seconds" class="form-label">QR validity (seconds)</label>
+          <input type="number" class="form-control" id="qr_validity_seconds" min="15" max="600" value="{{ config.QR_VALIDITY_SECONDS }}" required>
+          <div class="invalid-feedback" data-error-for="qr_validity_seconds"></div>
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="duration_minutes" class="form-label">Session length (minutes)</label>
+          <input type="number" class="form-control" id="duration_minutes" min="1" max="240" value="{{ config.SESSION_DEFAULT_MINUTES }}" required>
+          <div class="invalid-feedback" data-error-for="duration_minutes"></div>
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="radius_m" class="form-label">Allowed radius (m)</label>
+          <input type="number" class="form-control" id="radius_m" min="5" max="1000" value="50">
+          <div class="invalid-feedback" data-error-for="radius_m"></div>
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="min_accuracy_m" class="form-label">Worst GPS accuracy (m)</label>
+          <input type="number" class="form-control" id="min_accuracy_m" min="5" max="500" value="50">
+          <div class="invalid-feedback" data-error-for="min_accuracy_m"></div>
+        </div>
+        <div class="col-md-4">
+          <label for="latitude" class="form-label">Classroom latitude</label>
+          <input type="number" step="any" class="form-control" id="latitude" placeholder="e.g. 20.000000">
+          <div class="invalid-feedback" data-error-for="latitude"></div>
+        </div>
+        <div class="col-md-4">
+          <label for="longitude" class="form-label">Classroom longitude</label>
+          <input type="number" step="any" class="form-control" id="longitude" placeholder="e.g. 78.000000">
+          <div class="invalid-feedback" data-error-for="longitude"></div>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button type="button" class="btn btn-outline-secondary w-100" id="useLocation">
+            <i class="bi bi-crosshair me-1"></i>Use my current location
+          </button>
+        </div>
+        <div class="col-12">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="geofence_enabled" checked>
+            <label class="form-check-label" for="geofence_enabled">Require students to be inside the classroom radius</label>
+          </div>
+          <div class="form-text" id="locationHint">Coordinates are copied into the session when it starts; later classroom edits do not change it.</div>
+        </div>
+      </div>
+      <div class="alert alert-danger d-none mt-3 mb-0" id="startError" role="alert"></div>
+      <button type="submit" class="btn btn-nx mt-3" id="startBtn">
+        <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+        <span class="nx-btn-label">Start session</span>
+      </button>
+    </form>
+    {% endif %}
+    </div>
+  </section>
+
+  <!-- ============ Live session ============ -->
+  <section class="d-none" id="livePanel" aria-live="polite">
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <div class="nx-card p-3 p-md-4 text-center">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="h6 mb-0" id="liveTitle"></h2>
+            <span class="badge text-bg-success" id="liveState">Active</span>
+          </div>
+          <div class="nx-qr-box mb-3">
+            <img id="qrImage" alt="Attendance QR code" width="320" height="320" class="d-none">
+            <div class="spinner-border text-primary" id="qrSpinner" role="status"><span class="visually-hidden">Loading QR</span></div>
+          </div>
+          <div class="nx-countdown" id="qrCountdown">--</div>
+          <div class="text-muted small mb-3">Seconds until this QR expires. A new code appears automatically.</div>
+          <details class="text-start small mb-3">
+            <summary>Manual code (if a phone cannot scan)</summary>
+            <code class="d-block text-break mt-2" id="manualCode"></code>
+          </details>
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <button type="button" class="btn btn-outline-danger" id="closeBtn" data-bs-toggle="modal" data-bs-target="#closeModal">
+              <i class="bi bi-stop-circle me-1"></i>Close session
+            </button>
+            <a class="btn btn-outline-secondary" id="exportBtn" href="#"><i class="bi bi-download me-1"></i>Export CSV</a>
+            <button type="button" class="btn btn-nx d-none" id="newSessionBtn">Start another session</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="nx-card">
+          <div class="nx-card-head">
+            <h2 class="h6 mb-0">Present students</h2>
+            <span class="fw-semibold"><span id="presentCount">0</span> / <span id="enrolledCount">0</span></span>
+          </div>
+          <div class="small text-muted px-3 pt-2" id="sessionMeta"></div>
+          <div class="table-responsive">
+            <table class="table nx-table align-middle mb-0">
+              <thead><tr><th scope="col">Student</th><th scope="col">Roll no.</th><th scope="col">Time (local)</th><th scope="col" class="text-end">Distance</th></tr></thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+          <div id="recordsEmpty">{{ empty_state('bi-people', 'Nobody yet', 'Students appear here as soon as the server records them.') }}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal fade" id="closeModal" tabindex="-1" aria-labelledby="closeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title h5" id="closeModalLabel">Close this session?</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cancel"></button></div>
+    <div class="modal-body">No more students can mark attendance once it is closed. You can still view and export the records.</div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep open</button>
+      <button type="button" class="btn btn-danger" id="confirmClose">Close session</button>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/teacher-qr.js') }}"></script>{% endblock %}

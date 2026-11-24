@@ -1,0 +1,65 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+{% block title %}Syllabus{% endblock %}
+{% block content %}
+{{ page_header('Syllabus and learning materials', 'Browse by semester, open a subject to see its units, and download published materials.') }}
+{% if departments %}
+<form method="get" class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+  <label for="department" class="form-label mb-0">Department</label>
+  <select class="form-select w-auto" id="department" name="department" data-autosubmit>
+    {% for d in departments %}<option value="{{ d.id }}" {{ 'selected' if d.id == department_id }}>{{ d.name }}</option>{% endfor %}
+  </select>
+  <input type="hidden" name="semester" value="{{ semester }}">
+  <button class="btn btn-outline-secondary btn-sm" type="submit">Show</button>
+</form>
+{% endif %}
+<ul class="nav nav-pills mb-3 flex-wrap" aria-label="Semester">
+  {% for n in semesters %}
+  <li class="nav-item"><a class="nav-link {{ 'active' if n == semester }}" href="{{ url_for('syllabus.index', semester=n, department=(department_id if departments else None)) }}"
+      {% if n == semester %}aria-current="page"{% endif %}>Sem {{ n }}{% if n == current_semester %} <i class="bi bi-dot" title="Your current semester"></i>{% endif %}</a></li>
+  {% endfor %}
+</ul>
+{% if not view %}
+  <div class="nx-card">{{ empty_state('bi-building', 'No department', 'There is no department to show a syllabus for.') }}</div>
+{% elif not view.subjects %}
+  <div class="nx-card">{{ empty_state('bi-journal-x', 'No subjects', 'No subjects are defined for this semester in your department yet.') }}</div>
+{% else %}
+  {% if view.materials_hidden %}<div class="alert alert-info">Learning materials for later semesters become available when you reach them.</div>{% endif %}
+  <div class="accordion" id="subjectAccordion">
+  {% for s in view.subjects %}
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="h{{ s.id }}">
+        <button class="accordion-button {{ 'collapsed' if not loop.first }}" type="button" data-bs-toggle="collapse" data-bs-target="#c{{ s.id }}" aria-expanded="{{ 'true' if loop.first else 'false' }}" aria-controls="c{{ s.id }}">
+          <span class="fw-semibold me-2">{{ s.code }}</span> {{ s.name }} <span class="badge text-bg-light ms-2">{{ s.credits }} credits</span>
+        </button>
+      </h2>
+      <div id="c{{ s.id }}" class="accordion-collapse collapse {{ 'show' if loop.first }}" aria-labelledby="h{{ s.id }}">
+        <div class="accordion-body">
+          {% if s.units %}
+            {% for u in s.units %}
+            <details class="mb-2">
+              <summary class="fw-semibold">Unit {{ u.unit_number }}: {{ u.title }}{% if u.lecture_hours %} <span class="text-muted small">({{ u.lecture_hours }} hours)</span>{% endif %}</summary>
+              <div class="ps-3 pt-2 nx-prewrap">{{ u.topics }}</div>
+              {% if u.learning_outcomes %}<div class="ps-3 pt-2"><div class="small text-muted">Learning outcomes</div><div class="nx-prewrap">{{ u.learning_outcomes }}</div></div>{% endif %}
+              {% if u.reference_books %}<div class="ps-3 pt-2"><div class="small text-muted">References</div><div class="nx-prewrap">{{ u.reference_books }}</div></div>{% endif %}
+              {% if u.updated_at %}<div class="ps-3 small text-muted pt-1">Updated {{ u.updated_at.strftime('%d %b %Y') }}</div>{% endif %}
+            </details>
+            {% endfor %}
+          {% else %}<p class="text-muted mb-2">The unit-wise syllabus for this subject has not been published yet.</p>{% endif %}
+          <h3 class="h6 mt-3">Materials</h3>
+          {% if s.materials %}
+          <ul class="list-unstyled mb-0">
+            {% for m in s.materials %}
+            <li class="mb-1"><i class="bi bi-file-earmark-pdf text-danger me-1"></i>
+              <a href="{{ url_for('syllabus.download', material_id=m.id) }}">{{ m.title }}</a>
+              <span class="small text-muted">({{ (m.size_bytes / 1024)|round(0)|int }} KB · {{ m.uploaded_at.strftime('%d %b %Y') }})</span></li>
+            {% endfor %}
+          </ul>
+          {% else %}<p class="text-muted small mb-0">No materials available.</p>{% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

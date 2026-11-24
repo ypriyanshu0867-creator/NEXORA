@@ -1,0 +1,54 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, stat_card, empty_state, badge %}
+{% block title %}Academic Results{% endblock %}
+{% block content %}
+{{ page_header('Academic results', 'Official published results, grouped by academic year and semester.') }}
+
+{% for name in overview.not_published %}
+<div class="alert alert-info" role="alert"><i class="bi bi-hourglass-split me-1"></i>Results for <strong>{{ name }}</strong> have not been published yet.</div>
+{% endfor %}
+
+{% if overview.has_results %}
+  {% set c = overview.cgpa %}
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">{{ stat_card('bi-mortarboard', 'CGPA', c.cgpa|gpa(config.GPA_DECIMALS), 'teal') }}</div>
+    <div class="col-sm-6 col-xl-3">{{ stat_card('bi-123', 'Credits counted', c.total_credits, 'indigo') }}</div>
+    <div class="col-sm-6 col-xl-3">{{ stat_card('bi-calculator', 'Weighted grade-point total', c.total_weighted) }}</div>
+    <div class="col-sm-6 col-xl-3">{{ stat_card('bi-patch-check', 'Source', 'Official published results', 'amber') }}</div>
+  </div>
+  <p class="small text-muted">{{ c.label }}. CGPA = Σ(credit × grade point) ÷ Σ(credits) over all counted subjects; semester SGPAs are not averaged.
+    Repeat policy: <strong>{{ c.policy }}</strong> attempt counts.
+    {% if c.superseded %}{{ c.superseded|length }} earlier attempt(s) are not counted.{% endif %}</p>
+
+  {% for year in overview.years %}
+    <h2 class="h5 mt-4">Academic year {{ year.year_label }}</h2>
+    {% for sem in year.semesters %}
+    <div class="nx-card mb-3">
+      <div class="nx-card-head">
+        <h3 class="h6 mb-0">{{ sem.name }}</h3>
+        <span><span class="badge text-bg-success me-1">Official</span> SGPA <strong>{{ sem.gpa|gpa(config.GPA_DECIMALS) }}</strong>
+          <span class="text-muted small">({{ sem.total_credits }} credits)</span></span>
+      </div>
+      <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+        <thead><tr><th scope="col">Code</th><th scope="col">Subject</th><th scope="col" class="text-end">Credits</th><th scope="col" class="text-end">Marks</th><th scope="col">Grade</th><th scope="col" class="text-end">Grade points</th><th scope="col">Result</th></tr></thead>
+        <tbody>{% for s in sem.subjects %}
+          <tr><td class="fw-semibold">{{ s.code }}</td><td>{{ s.name }}</td><td class="text-end">{{ s.credits }}</td>
+              <td class="text-end">{{ s.marks_obtained }} / {{ s.max_marks }}</td><td>{{ s.grade_label }}</td>
+              <td class="text-end">{{ s.grade_point }}</td><td>{{ badge(s.status) }}</td></tr>
+        {% endfor %}</tbody></table></div>
+    </div>
+    {% endfor %}
+  {% endfor %}
+
+  <div class="nx-card mt-4">
+    <div class="nx-card-head"><h2 class="h6 mb-0">Academic history: SGPA by semester</h2></div>
+    <div class="table-responsive"><table class="table nx-table mb-0">
+      <thead><tr><th scope="col">Semester</th><th scope="col">Year</th><th scope="col" class="text-end">Credits</th><th scope="col" class="text-end">SGPA</th></tr></thead>
+      <tbody>{% for s in c.semesters %}<tr><td>{{ s.semester_name }}</td><td>{{ s.year_label }}</td><td class="text-end">{{ s.total_credits }}</td><td class="text-end">{{ s.gpa|gpa(config.GPA_DECIMALS) }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+{% elif not overview.not_published %}
+  <div class="nx-card">{{ empty_state('bi-mortarboard', 'No results yet', 'No results have been published for you. They will appear here after your institution publishes them.') }}</div>
+{% endif %}
+<p class="mt-3"><a href="{{ url_for('academics.calculator') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-calculator me-1"></i>Open the SGPA / CGPA calculator</a></p>
+{% endblock %}

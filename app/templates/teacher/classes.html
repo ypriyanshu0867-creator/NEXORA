@@ -1,0 +1,18 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state, badge %}
+{% block title %}My Classes{% endblock %}
+{% block content %}
+{{ page_header('My subjects and classes', 'Only the assignments an administrator has given you are listed.') }}
+<div class="nx-card">
+{% if assignments %}
+<div class="table-responsive"><table class="table nx-table align-middle mb-0">
+  <thead><tr><th scope="col">Subject</th><th scope="col">Department</th><th scope="col">Year</th><th scope="col">Semester</th><th scope="col">Class</th><th scope="col" class="text-end">Students</th><th scope="col" class="text-end">Actions</th></tr></thead>
+  <tbody>{% for a in assignments %}
+    <tr><td><span class="fw-semibold">{{ a.subject_code }}</span> · {{ a.subject_name }}</td><td>{{ a.department }}</td><td>{{ a.year_label }}</td>
+      <td>{{ a.semester_name }}{% if a.is_current %} <span class="badge text-bg-success">Current</span>{% endif %}</td><td>{{ a.class_name }} {{ a.section }}</td><td class="text-end">{{ a.enrolled }}</td>
+      <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('teacher.class_detail', assignment_id=a.id) }}">Students</a>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('teacher.results_entry', assignment_id=a.id) }}">Results</a></td></tr>
+  {% endfor %}</tbody></table></div>
+{% else %}{{ empty_state('bi-journal-x', 'No assignments yet', 'Ask an administrator to assign subjects and classes to you.') }}{% endif %}
+</div>
+{% endblock %}

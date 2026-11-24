@@ -1,0 +1,35 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state, pagination %}
+{% block title %}Notices{% endblock %}
+{% block content %}
+{{ page_header('Notice board', 'Announcements addressed to you or to the whole college.') }}
+<form class="nx-card p-3 mb-3" method="get" action="{{ url_for('notices.index') }}">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4"><label for="q" class="form-label">Search</label><input type="search" id="q" name="q" class="form-control" value="{{ q }}" maxlength="100"></div>
+    <div class="col-md-3"><label for="category" class="form-label">Category</label>
+      <select id="category" name="category" class="form-select"><option value="">All</option>
+        {% for key, label in categories %}<option value="{{ key }}" {{ 'selected' if key == category }}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-2"><label for="from" class="form-label">From</label><input type="date" id="from" name="from" class="form-control" value="{{ date_from }}"></div>
+    <div class="col-6 col-md-2"><label for="to" class="form-label">To</label><input type="date" id="to" name="to" class="form-control" value="{{ date_to }}"></div>
+    <div class="col-md-1 d-grid"><button class="btn btn-nx" type="submit" aria-label="Apply filters"><i class="bi bi-funnel"></i></button></div>
+    <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" id="expired" name="expired" value="1" {{ 'checked' if include_expired }}><label class="form-check-label" for="expired">Include expired notices</label></div></div>
+  </div>
+</form>
+{% if result['items'] %}
+<div class="d-grid gap-3">
+  {% for n in result['items'] %}
+  <article class="nx-card p-3 {{ 'nx-pinned' if n.is_pinned }}">
+    <div class="d-flex justify-content-between flex-wrap gap-2">
+      <h2 class="h6 mb-1"><a href="{{ url_for('notices.detail', notice_id=n.id) }}">{% if n.is_pinned %}<i class="bi bi-pin-angle-fill text-primary me-1" title="Pinned"></i>{% endif %}{{ n.title }}</a></h2>
+      <div><span class="badge text-bg-light text-capitalize">{{ n.category }}</span>{% if n.expired %} <span class="badge text-bg-secondary">Expired</span>{% endif %}{% if n.has_attachment %} <i class="bi bi-paperclip" title="Has attachment"></i>{% endif %}</div>
+    </div>
+    <div class="small text-muted mb-2">Published {{ n.published.strftime('%d %b %Y') }}{% if n.deadline_at %} · Deadline {{ n.deadline_at.strftime('%d %b %Y %H:%M') }} UTC{% endif %}</div>
+    <p class="mb-0">{{ n.excerpt }}{% if n.excerpt|length >= 220 %}…{% endif %}</p>
+  </article>
+  {% endfor %}
+</div>
+{{ pagination(result.page, result.pages) }}
+{% else %}
+<div class="nx-card">{{ empty_state('bi-megaphone', 'No notices', 'No notices match your filters.') }}</div>
+{% endif %}
+{% endblock %}

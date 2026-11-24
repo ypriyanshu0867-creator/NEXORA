@@ -1,0 +1,146 @@
+
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+
+{% block title %}Classrooms{% endblock %}
+
+{% block content %}
+{{ page_header("Classrooms", "Manage classroom locations and geofencing radius.") }}
+
+<div class="nx-card p-4 mb-4">
+  <h2 class="h5 mb-3">Add Classroom</h2>
+
+  <form method="POST" action="{{ url_for('admin.classrooms') }}" class="row g-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="col-md-4">
+      <label class="form-label" for="room_name">Classroom Name</label>
+      <input class="form-control" id="room_name" name="name"
+             maxlength="60" required placeholder="e.g. Room B-201">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label" for="building">Building</label>
+      <input class="form-control" id="building" name="building"
+             maxlength="80" placeholder="e.g. Main Block">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label" for="radius">Allowed Radius (metres)</label>
+      <input class="form-control" id="radius" name="default_radius_m"
+             type="number" min="5" max="5000" value="50" required>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="latitude">Latitude</label>
+      <input class="form-control" id="latitude" name="latitude"
+             type="number" step="any" min="-90" max="90" required
+             placeholder="e.g. 18.520430">
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="longitude">Longitude</label>
+      <input class="form-control" id="longitude" name="longitude"
+             type="number" step="any" min="-180" max="180" required
+             placeholder="e.g. 73.856744">
+    </div>
+
+    <div class="col-12">
+      <button class="btn btn-nx" type="submit">Add Classroom</button>
+    </div>
+  </form>
+</div>
+
+<div class="nx-card p-4">
+  <h2 class="h5 mb-3">Existing Classrooms</h2>
+
+  {% if classrooms %}
+  <div class="table-responsive">
+    <table class="table nx-table align-middle">
+      <thead>
+        <tr>
+          <th>Classroom</th>
+          <th>Building</th>
+          <th>Latitude</th>
+          <th>Longitude</th>
+          <th>Radius</th>
+          <th>Edit</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for room in classrooms %}
+        <tr>
+          <td><strong>{{ room.name }}</strong></td>
+          <td>{{ room.building or "—" }}</td>
+          <td>{{ room.latitude }}</td>
+          <td>{{ room.longitude }}</td>
+          <td>{{ room.default_radius_m }} m</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary"
+                    type="button" data-bs-toggle="collapse"
+                    data-bs-target="#room-edit-{{ room.id }}">
+              Edit
+            </button>
+          </td>
+        </tr>
+
+        <tr class="collapse" id="room-edit-{{ room.id }}">
+          <td colspan="6">
+            <form method="POST"
+                  action="{{ url_for('admin.edit_classroom', classroom_id=room.id) }}"
+                  class="row g-2">
+
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+              <div class="col-md-3">
+                <label class="form-label">Classroom Name</label>
+                <input class="form-control" name="name"
+                       maxlength="60" value="{{ room.name }}" required>
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Building</label>
+                <input class="form-control" name="building"
+                       maxlength="80" value="{{ room.building or '' }}">
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Latitude</label>
+                <input class="form-control" name="latitude"
+                       type="number" step="any" min="-90" max="90"
+                       value="{{ room.latitude }}" required>
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Longitude</label>
+                <input class="form-control" name="longitude"
+                       type="number" step="any" min="-180" max="180"
+                       value="{{ room.longitude }}" required>
+              </div>
+
+              <div class="col-md-1">
+                <label class="form-label">Radius</label>
+                <input class="form-control" name="default_radius_m"
+                       type="number" min="5" max="5000"
+                       value="{{ room.default_radius_m }}" required>
+              </div>
+
+              <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-nx btn-sm w-100" type="submit">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+    {{ empty_state("bi-geo-alt", "No classrooms found", "Add your first classroom above.") }}
+  {% endif %}
+</div>
+{% endblock %}

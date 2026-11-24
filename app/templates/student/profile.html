@@ -1,0 +1,40 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, field, password_field %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+{{ page_header('My profile', 'Your official details are managed by the administration.') }}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="nx-card p-3 p-md-4 mb-4">
+      <h2 class="h6">Official details</h2>
+      <dl class="row mb-0">
+        <dt class="col-sm-4">Name</dt><dd class="col-sm-8">{{ profile.full_name }}</dd>
+        <dt class="col-sm-4">Student ID</dt><dd class="col-sm-8">{{ profile.roll_number }}</dd>
+        <dt class="col-sm-4">College email</dt><dd class="col-sm-8">{{ profile.email }}</dd>
+        <dt class="col-sm-4">Department</dt><dd class="col-sm-8">{{ profile.department }}</dd>
+        <dt class="col-sm-4">Academic year</dt><dd class="col-sm-8">{{ profile.year_label or '—' }}</dd>
+        <dt class="col-sm-4">Semester</dt><dd class="col-sm-8">{{ profile.semester_name or '—' }}</dd>
+        <dt class="col-sm-4">Class</dt><dd class="col-sm-8">{{ (profile.class_name ~ ' ' ~ profile.section) if profile.class_name else '—' }}</dd>
+      </dl>
+      <p class="small text-muted mt-3 mb-0">To correct any of these, contact the administration.</p>
+    </div>
+    <form method="post" action="{{ url_for('student.update_contact') }}" class="nx-card p-3 p-md-4" data-loading novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="h6">Contact details</h2>
+      {{ field('phone', 'Phone number', value=profile.phone or '', type='tel', error=phone_error, autocomplete='tel', required=False) }}
+      <button class="btn btn-nx" type="submit"><span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span><span class="nx-btn-label">Save contact details</span></button>
+    </form>
+  </div>
+  <div class="col-lg-6">
+    <form method="post" action="{{ url_for('student.change_password') }}" class="nx-card p-3 p-md-4" data-loading novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="h6">Change password</h2>
+      {% if pw_errors._form %}<div class="alert alert-danger" role="alert">{{ pw_errors._form }}</div>{% endif %}
+      {{ password_field('current_password', 'Current password', error=pw_errors.current_password, autocomplete='current-password') }}
+      {{ password_field('new_password', 'New password', error=pw_errors.new_password, autocomplete='new-password', help='At least 8 characters with a letter and a number.') }}
+      {{ password_field('confirm_password', 'Confirm new password', error=pw_errors.confirm_password, autocomplete='new-password') }}
+      <button class="btn btn-nx" type="submit"><span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span><span class="nx-btn-label">Change password</span></button>
+    </form>
+  </div>
+</div>
+{% endblock %}

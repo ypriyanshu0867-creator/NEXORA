@@ -1,0 +1,78 @@
+{% macro field(name, label, value='', type='text', error=None, autocomplete=None, placeholder='', help=None, required=True) %}
+<div class="mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <input type="{{ type }}" class="form-control{% if error %} is-invalid{% endif %}" id="{{ name }}"
+         name="{{ name }}" value="{{ value }}"
+         {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+         {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+         {% if required %}required{% endif %}
+         {% if error %}aria-invalid="true" aria-describedby="{{ name }}-feedback"{% endif %}>
+  {% if error %}<div class="invalid-feedback" id="{{ name }}-feedback">{{ error }}</div>
+  {% elif help %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro password_field(name, label, error=None, autocomplete='current-password', help=None) %}
+<div class="mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <div class="input-group">
+    <input type="password" class="form-control{% if error %} is-invalid{% endif %}" id="{{ name }}"
+           name="{{ name }}" autocomplete="{{ autocomplete }}" required
+           {% if error %}aria-invalid="true" aria-describedby="{{ name }}-feedback"{% endif %}>
+    <button class="btn btn-outline-secondary" type="button" data-toggle-password="#{{ name }}"
+            aria-label="Show or hide password"><i class="bi bi-eye"></i></button>
+    {% if error %}<div class="invalid-feedback" id="{{ name }}-feedback">{{ error }}</div>{% endif %}
+  </div>
+  {% if help and not error %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro submit_button(label) %}
+<button type="submit" class="btn btn-nx w-100">
+  <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+  <span class="nx-btn-label">{{ label }}</span>
+</button>
+{% endmacro %}
+
+{% macro page_header(title, subtitle=None) %}
+<div class="nx-page-header">
+  <h1 class="h3 mb-1">{{ title }}</h1>
+  {% if subtitle %}<p class="text-muted mb-0">{{ subtitle }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro stat_card(icon, label, value, tone='blue') %}
+<div class="nx-card nx-stat">
+  <span class="nx-stat-icon nx-tone-{{ tone }}"><i class="bi {{ icon }}"></i></span>
+  <div>
+    <div class="nx-stat-value">{{ value }}</div>
+    <div class="nx-stat-label">{{ label }}</div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro empty_state(icon, title, text) %}
+<div class="nx-empty">
+  <i class="bi {{ icon }}"></i>
+  <h2 class="h6 mt-2 mb-1">{{ title }}</h2>
+  <p class="text-muted mb-0">{{ text }}</p>
+</div>
+{% endmacro %}
+
+{% macro pagination(page, pages) %}
+{% if pages > 1 %}
+<nav aria-label="Pagination" class="d-flex justify-content-center py-3">
+  <ul class="pagination mb-0">
+    {% set base = dict(request.view_args or {}, **request.args.to_dict()) %}
+    {% if page > 1 %}<li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, **dict(base, page=page-1)) }}">Previous</a></li>{% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ page }} of {{ pages }}</span></li>
+    {% if page < pages %}<li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, **dict(base, page=page+1)) }}">Next</a></li>{% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro badge(text) %}
+{% set tone = {'Paid':'success','Pass':'success','Available':'success','Returned':'secondary','Issued':'primary','Pending':'warning','Partially paid':'info','Overdue':'danger','Fail':'danger','Waived':'secondary','confirmed':'success','pending':'warning','failed':'danger','Present':'success','Absent':'danger','Draft':'warning','Published':'success','Active':'success','Closed':'secondary','Ended':'secondary','Hidden':'secondary','Visible':'success'}.get(text, 'secondary') %}
+<span class="badge text-bg-{{ tone }}">{{ text }}</span>
+{% endmacro %}

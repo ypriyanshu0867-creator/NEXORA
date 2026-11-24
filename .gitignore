@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+instance/uploads/*
+!instance/uploads/.gitkeep
+.pytest_cache/
+.vscode/
+backups/
+.env.*
+!.env.example
+/nexora_backup.sql

@@ -1,0 +1,66 @@
+{% extends "layouts/auth.html" %}
+{% from "components/macros.html" import field, password_field, submit_button %}
+{% block title %}Register{% endblock %}
+{% block auth_content %}
+<h2 class="h4 mb-1">Create your account</h2>
+<p class="text-muted mb-4">An administrator reviews every new account before it can sign in.</p>
+
+{% if errors._form %}
+<div class="alert alert-danger" role="alert">{{ errors._form }}</div>
+{% endif %}
+
+{% if not departments %}
+<div class="alert alert-warning" role="alert">
+  No departments have been set up yet, so registration is unavailable. Ask an administrator to add them.
+</div>
+{% else %}
+<form method="post" action="{{ url_for('auth.register') }}" data-loading novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6">I am a</legend>
+    <div class="btn-group w-100" role="group" aria-label="Account type">
+      <input type="radio" class="btn-check" name="role" id="role-student" value="student"
+             data-role-radio {% if form.role != 'teacher' %}checked{% endif %}>
+      <label class="btn btn-outline-nx" for="role-student">Student</label>
+      <input type="radio" class="btn-check" name="role" id="role-teacher" value="teacher"
+             data-role-radio {% if form.role == 'teacher' %}checked{% endif %}>
+      <label class="btn btn-outline-nx" for="role-teacher">Teacher</label>
+    </div>
+    {% if errors.role %}<div class="text-danger small mt-1">{{ errors.role }}</div>{% endif %}
+  </fieldset>
+
+  {{ field('full_name', 'Full name', value=form.full_name, error=errors.full_name, autocomplete='name') }}
+  {{ field('email', 'Email', value=form.email, type='email', error=errors.email, autocomplete='email') }}
+
+  <div class="mb-3">
+    <label for="department_id" class="form-label">Department</label>
+    <select class="form-select{% if errors.department_id %} is-invalid{% endif %}" id="department_id"
+            name="department_id" required>
+      <option value="">Select department</option>
+      {% for d in departments %}
+        <option value="{{ d.id }}" {% if form.department_id|string == d.id|string %}selected{% endif %}>{{ d.name }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.department_id %}<div class="invalid-feedback">{{ errors.department_id }}</div>{% endif %}
+  </div>
+
+  <div class="mb-3">
+    <label for="identifier" class="form-label" id="identifierLabel"
+           data-student="Roll number" data-teacher="Employee code">
+      {{ 'Employee code' if form.role == 'teacher' else 'Roll number' }}
+    </label>
+    <input type="text" class="form-control{% if errors.identifier %} is-invalid{% endif %}" id="identifier"
+           name="identifier" value="{{ form.identifier }}" required maxlength="30" autocomplete="off">
+    {% if errors.identifier %}<div class="invalid-feedback">{{ errors.identifier }}</div>{% endif %}
+  </div>
+
+  {{ password_field('password', 'Password', error=errors.password, autocomplete='new-password',
+                    help='At least 8 characters with a letter and a number.') }}
+  {{ password_field('confirm_password', 'Confirm password', error=errors.confirm_password,
+                    autocomplete='new-password') }}
+  {{ submit_button('Submit registration') }}
+</form>
+{% endif %}
+<p class="text-center text-muted mt-4 mb-0">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+{% endblock %}

@@ -1,0 +1,8 @@
+Flask==3.0.3
+Werkzeug==3.0.3
+Flask-WTF==1.2.1
+mysql-connector-python==8.4.0
+python-dotenv==1.0.1
+qrcode[pil]==7.4.2
+cryptography==42.0.8
+pytest==8.2.2

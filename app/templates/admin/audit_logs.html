@@ -1,0 +1,187 @@
+
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+
+{% block title %}Audit Logs{% endblock %}
+
+{% block content %}
+{{ page_header('Audit Logs', 'Monitor account activity and administrative actions across NEXORA.') }}
+
+<div class="nx-card p-3 mb-4">
+  <form method="get" action="{{ url_for('admin.audit_logs') }}">
+    <div class="row g-3 align-items-end">
+
+      <div class="col-md-4">
+        <label class="form-label" for="search">Search user</label>
+        <input class="form-control" id="search" name="search"
+               value="{{ search }}" placeholder="Name or email">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label" for="action">Action</label>
+        <select class="form-select" id="action" name="action">
+          <option value="">All actions</option>
+          {% for value in actions %}
+          <option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>
+            {{ value }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label" for="entity_type">Entity type</label>
+        <select class="form-select" id="entity_type" name="entity_type">
+          <option value="">All entity types</option>
+          {% for value in entity_types %}
+          <option value="{{ value }}" {% if selected_entity_type == value %}selected{% endif %}>
+            {{ value|title|replace('_', ' ') }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label" for="date_from">From date</label>
+        <input class="form-control" type="date" id="date_from"
+               name="date_from" value="{{ date_from }}">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label" for="date_to">To date</label>
+        <input class="form-control" type="date" id="date_to"
+               name="date_to" value="{{ date_to }}">
+      </div>
+
+      <div class="col-md-4 d-flex gap-2">
+        <button class="btn btn-nx flex-grow-1" type="submit">Apply Filters</button>
+        <a class="btn btn-outline-secondary"
+           href="{{ url_for('admin.audit_logs') }}">Reset</a>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+<div class="nx-card">
+  <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h5 class="mb-0">Activity History</h5>
+    <span class="badge text-bg-light">{{ total }} records</span>
+  </div>
+
+  {% if logs %}
+  <div class="table-responsive">
+    <table class="table nx-table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>ID / Date</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Entity</th>
+          <th>Details</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="text-nowrap">
+            <div class="fw-semibold">#{{ log.id }}</div>
+            <div class="small text-muted">
+              {{ log.created_at.strftime('%d %b %Y') }}
+            </div>
+            <div class="small text-muted">
+              {{ log.created_at.strftime('%I:%M:%S %p') }}
+            </div>
+          </td>
+
+          <td>
+            {% if log.user_name %}
+              <div class="fw-semibold">{{ log.user_name }}</div>
+              <div class="small text-muted">{{ log.user_email }}</div>
+            {% else %}
+              <span class="text-muted">System / Deleted user</span>
+            {% endif %}
+            <div class="small text-muted">
+              User ID: {{ log.user_id or '—' }}
+            </div>
+          </td>
+
+          <td>
+            <span class="badge text-bg-primary">
+              {{ log.action }}
+            </span>
+          </td>
+
+          <td>
+            <div>{{ (log.entity_type or '—')|replace('_', ' ')|title }}</div>
+            {% if log.entity_id %}
+            <div class="small text-muted">ID: {{ log.entity_id }}</div>
+            {% endif %}
+          </td>
+
+          <td class="nx-audit-details-cell">
+            {% if log.details %}
+            <details>
+             <summary class="text-primary nx-audit-details-summary">
+                View details
+              </summary>
+              <pre class="small bg-light rounded p-2 mt-2 mb-0 nx-prewrap">{{ log.details|tojson(indent=2) }}</pre>
+            </details>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+
+          <td class="text-nowrap">
+            {{ log.ip_address or '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+    <div class="p-3">
+      {{ empty_state('bi-shield-check', 'No audit records found', 'Try changing your filters or date range.') }}
+    </div>
+  {% endif %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="mt-4" aria-label="Audit log pagination">
+  <ul class="pagination justify-content-center flex-wrap">
+
+    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+      <a class="page-link"
+         href="{{ url_for('admin.audit_logs', page=page-1, action=selected_action, entity_type=selected_entity_type, search=search, date_from=date_from, date_to=date_to) }}">
+        Previous
+      </a>
+    </li>
+
+    {% for number in range(1, total_pages + 1) %}
+    <li class="page-item {% if number == page %}active{% endif %}">
+      <a class="page-link"
+         href="{{ url_for('admin.audit_logs', page=number, action=selected_action, entity_type=selected_entity_type, search=search, date_from=date_from, date_to=date_to) }}">
+        {{ number }}
+      </a>
+    </li>
+    {% endfor %}
+
+    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+      <a class="page-link"
+         href="{{ url_for('admin.audit_logs', page=page+1, action=selected_action, entity_type=selected_entity_type, search=search, date_from=date_from, date_to=date_to) }}">
+        Next
+      </a>
+    </li>
+
+  </ul>
+  <p class="text-center text-muted small">
+    Page {{ page }} of {{ total_pages }}
+  </p>
+</nav>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, stat_card, empty_state, badge %}
+{% block title %}{{ report.assignment.subject_code }} · {{ report.assignment.class_name }}{% endblock %}
+{% block content %}
+{% set a = report.assignment %}
+{{ page_header(a.subject_code ~ ' · ' ~ a.subject_name, a.class_name ~ ' ' ~ a.section ~ ' · ' ~ a.semester_name ~ ' · ' ~ a.year_label) }}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-people', 'Enrolled students', a.enrolled) }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-calendar-check', 'Sessions held', report.conducted, 'teal') }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-award', 'Credits', a.credits, 'indigo') }}</div>
+</div>
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('teacher.reports', assignment_id=a.id, format='csv') }}"><i class="bi bi-download me-1"></i>Export attendance CSV</a>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('teacher.results_entry', assignment_id=a.id) }}"><i class="bi bi-mortarboard me-1"></i>Results</a>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('teacher.sessions', assignment_id=a.id) }}"><i class="bi bi-clock-history me-1"></i>All sessions</a>
+</div>
+<div class="nx-card mb-4">
+  <div class="nx-card-head"><h2 class="h6 mb-0">Students and attendance</h2><span class="small text-muted">Alert below {{ report.threshold }}%</span></div>
+  {% if report.students %}
+  <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+    <thead><tr><th scope="col">Roll no.</th><th scope="col">Student</th><th scope="col" class="text-end">Attended / held</th><th scope="col" class="text-end">%</th></tr></thead>
+    <tbody>{% for s in report.students %}
+      <tr><td>{{ s.roll_number or '—' }}</td><td>{{ s.full_name }}</td><td class="text-end">{{ s.attended }} / {{ s.conducted }}</td>
+        <td class="text-end">{% if s.percent is none %}—{% else %}<span class="{{ 'text-danger fw-semibold' if s.percent < report.threshold }}">{{ s.percent }}%</span>{% endif %}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty_state('bi-people', 'No students enrolled', 'No active enrolments for this class yet.') }}{% endif %}
+</div>
+<div class="nx-card">
+  <div class="nx-card-head"><h2 class="h6 mb-0">Recent sessions</h2></div>
+  {% if recent %}<ul class="list-group list-group-flush">{% for s in recent %}
+    <li class="list-group-item d-flex justify-content-between"><a href="{{ url_for('teacher.session_detail', session_id=s.id) }}">{{ s.started_at.strftime('%d %b %Y %H:%M') }} UTC</a>
+      <span>{{ badge(s.state|capitalize) }} <span class="ms-2">{{ s.present }} present</span></span></li>{% endfor %}</ul>
+  {% else %}{{ empty_state('bi-calendar-x', 'No sessions', 'No attendance session has been run for this class.') }}{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, stat_card, empty_state, badge %}
+{% block title %}Teacher Dashboard{% endblock %}
+{% block content %}
+{{ page_header('Hello, ' ~ current_user.full_name, (d.profile.department ~ ' · ' ~ d.profile.employee_code) if d.profile else 'Your teaching overview.') }}
+<div class="d-flex gap-2 flex-wrap mb-4">
+  <a class="btn btn-nx" href="{{ url_for('attendance.teacher_sessions') }}"><i class="bi bi-qr-code me-1"></i>Start attendance</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('teacher.reports') }}"><i class="bi bi-bar-chart-line me-1"></i>Attendance reports</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('teacher.syllabus') }}"><i class="bi bi-journal-text me-1"></i>Syllabus &amp; materials</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('teacher.results') }}"><i class="bi bi-mortarboard me-1"></i>Enter results</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('teacher.notice_form') }}"><i class="bi bi-megaphone me-1"></i>Publish a notice</a>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-2">{{ stat_card('bi-journal-bookmark', 'Assigned subjects', d.stats.subjects) }}</div>
+  <div class="col-sm-6 col-xl-2">{{ stat_card('bi-diagram-3', 'Assigned classes', d.stats.classes, 'indigo') }}</div>
+  <div class="col-sm-6 col-xl-2">{{ stat_card('bi-calendar-check', 'Sessions held', d.stats.sessions_conducted, 'teal') }}</div>
+  <div class="col-sm-6 col-xl-2">{{ stat_card('bi-person-check', 'Marked present today', d.stats.present_today, 'amber') }}</div>
+  <div class="col-sm-6 col-xl-2">{{ stat_card('bi-pie-chart', 'Average attendance', (d.stats.average_percent ~ '%') if d.stats.average_percent is not none else 'No sessions yet') }}</div>
+  <div class="col-sm-6 col-xl-2">{{ stat_card('bi-alarm', 'Upcoming deadlines', d.deadlines|length, 'indigo') }}</div>
+</div>
+{% if d.active_sessions %}
+<div class="alert alert-success d-flex justify-content-between flex-wrap gap-2" role="status">
+  <span><i class="bi bi-broadcast me-1"></i><strong>{{ d.active_sessions|length }}</strong> attendance session(s) running:
+    {% for s in d.active_sessions %}{{ s.subject_code }} ({{ s.class_name }}){{ ', ' if not loop.last }}{% endfor %}</span>
+  <a class="btn btn-sm btn-success" href="{{ url_for('attendance.teacher_sessions') }}">Open QR screen</a>
+</div>
+{% endif %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="nx-card mb-4">
+      <div class="nx-card-head"><h2 class="h6 mb-0">Assigned subjects and classes</h2><a class="small" href="{{ url_for('teacher.classes') }}">All classes</a></div>
+      {% if d.summary %}
+      <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+        <thead><tr><th scope="col">Subject</th><th scope="col">Class</th><th scope="col" class="text-end">Students</th><th scope="col" class="text-end">Sessions</th><th scope="col" class="text-end">Avg %</th></tr></thead>
+        <tbody>{% for s in d.summary %}
+          <tr><td><a href="{{ url_for('teacher.class_detail', assignment_id=s.id) }}" class="fw-semibold">{{ s.subject_code }}</a> <span class="text-muted d-none d-md-inline">{{ s.subject_name }}</span></td>
+            <td>{{ s.class_name }} {{ s.section }}</td><td class="text-end">{{ s.enrolled }}</td><td class="text-end">{{ s.conducted }}</td>
+            <td class="text-end">{{ (s.average_percent ~ '%') if s.average_percent is not none else '—' }}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state('bi-journal-x', 'No assignments yet', 'An administrator has not assigned any subjects to you.') }}{% endif %}
+    </div>
+    <div class="nx-card">
+      <div class="nx-card-head"><h2 class="h6 mb-0">Recent attendance sessions</h2><a class="small" href="{{ url_for('teacher.sessions') }}">History</a></div>
+      {% if d.recent_sessions %}
+      <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+        <thead><tr><th scope="col">Started (UTC)</th><th scope="col">Subject</th><th scope="col">Class</th><th scope="col">State</th><th scope="col" class="text-end">Present</th></tr></thead>
+        <tbody>{% for s in d.recent_sessions %}
+          <tr><td><a href="{{ url_for('teacher.session_detail', session_id=s.id) }}">{{ s.started_at.strftime('%d %b %H:%M') }}</a></td><td>{{ s.subject_code }}</td><td>{{ s.class_name }} {{ s.section }}</td>
+            <td>{{ badge(s.state|capitalize) }}</td><td class="text-end">{{ s.present }}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state('bi-calendar-x', 'No sessions yet', 'Start an attendance session to see it here.') }}{% endif %}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="nx-card mb-4">
+      <div class="nx-card-head"><h2 class="h6 mb-0">Upcoming deadlines</h2></div>
+      {% if d.deadlines %}<ul class="list-group list-group-flush">{% for n in d.deadlines %}
+        <li class="list-group-item"><a href="{{ url_for('notices.detail', notice_id=n.id) }}" class="fw-semibold">{{ n.title }}</a>
+          <div class="small text-muted">Due {{ n.deadline_at.strftime('%d %b %Y %H:%M') }} UTC</div></li>{% endfor %}</ul>
+      {% else %}{{ empty_state('bi-alarm', 'No deadlines', 'No upcoming academic deadlines in your notices.') }}{% endif %}
+    </div>
+    <div class="nx-card mb-4">
+      <div class="nx-card-head"><h2 class="h6 mb-0">Recent student activity</h2></div>
+      {% if d.activity %}<ul class="list-group list-group-flush">{% for a in d.activity %}
+        <li class="list-group-item d-flex justify-content-between"><span>{{ a.full_name }} <span class="text-muted small">in {{ a.code }}{% if a.source == 'correction' %} (corrected){% endif %}</span></span>
+          <span class="small text-muted">{{ a.marked_at.strftime('%d %b %H:%M') }}</span></li>{% endfor %}</ul>
+      {% else %}{{ empty_state('bi-activity', 'No activity yet', 'Check-ins appear here as students mark attendance.') }}{% endif %}
+    </div>
+    <div class="nx-card">
+      <div class="nx-card-head"><h2 class="h6 mb-0">Notices</h2><a class="small" href="{{ url_for('teacher.notices') }}">Manage mine</a></div>
+      {% if d.notices %}<ul class="list-group list-group-flush">{% for n in d.notices %}
+        <li class="list-group-item"><a href="{{ url_for('notices.detail', notice_id=n.id) }}" class="fw-semibold">{{ n.title }}</a>
+          <div class="small text-muted text-capitalize">{{ n.category }} · {{ n.published.strftime('%d %b %Y') }}</div></li>{% endfor %}</ul>
+      {% else %}{{ empty_state('bi-megaphone', 'No notices', 'Nothing has been posted for you.') }}{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

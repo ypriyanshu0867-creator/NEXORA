@@ -1,0 +1,41 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+{% block title %}Pending Approvals{% endblock %}
+{% block content %}
+{{ page_header('Pending approvals', 'Review accounts that registered themselves.') }}
+<div class="nx-card">
+  {% if pending %}
+  <div class="table-responsive">
+    <table class="table nx-table align-middle mb-0">
+      <thead><tr>
+        <th scope="col">Name</th><th scope="col">Role</th><th scope="col">ID</th>
+        <th scope="col">Department</th><th scope="col">Registered (UTC)</th><th scope="col" class="text-end">Action</th>
+      </tr></thead>
+      <tbody>
+      {% for u in pending %}
+        <tr>
+          <td><div class="fw-semibold">{{ u.full_name }}</div><div class="small text-muted">{{ u.email }}</div></td>
+          <td><span class="badge text-bg-light text-capitalize">{{ u.role }}</span></td>
+          <td>{{ u.identifier }}</td>
+          <td>{{ u.department }}</td>
+          <td>{{ u.created_at.strftime('%d %b %Y, %H:%M') }}</td>
+          <td class="text-end text-nowrap">
+            <form method="post" action="{{ url_for('admin.approve_user', user_id=u.id) }}" class="d-inline" data-loading>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-nx" type="submit">Approve</button>
+            </form>
+            <form method="post" action="{{ url_for('admin.reject_user', user_id=u.id) }}" class="d-inline" data-loading>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Reject</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('bi-check2-circle', 'All caught up', 'There are no accounts waiting for approval.') }}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "layouts/auth.html" %}
+{% from "components/macros.html" import field, password_field, submit_button %}
+{% block title %}Sign in{% endblock %}
+{% block auth_content %}
+<h2 class="h4 mb-1">Sign in</h2>
+<p class="text-muted mb-4">Use your college account to continue.</p>
+
+{% if error %}
+<div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+  <i class="bi bi-exclamation-octagon-fill"></i><div>{{ error }}</div>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('auth.login') }}" data-loading novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ next_url }}">
+  {{ field('email', 'Email', value=email, type='email', autocomplete='username', placeholder='you@college.edu') }}
+  {{ password_field('password', 'Password') }}
+  {{ submit_button('Sign in') }}
+</form>
+<p class="text-center text-muted mt-4 mb-0">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+{% endblock %}

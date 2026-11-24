@@ -1,0 +1,47 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header %}
+{% block title %}Scan QR{% endblock %}
+{% block content %}
+{{ page_header('Mark attendance', 'Scan the QR code shown by your teacher.') }}
+<div id="scanApp" class="row g-4">
+  <div class="col-lg-6">
+    <div class="nx-card p-3 p-md-4">
+      <div id="reader" class="nx-reader mb-3" aria-label="Camera preview"></div>
+      <div class="alert alert-secondary mb-3 d-none" id="unsupported" role="alert">
+        This browser cannot open the camera here. Use a current Chrome, Safari or Firefox over HTTPS, or type the code below.
+      </div>
+      <div class="d-grid gap-2">
+        <button type="button" class="btn btn-nx" id="startBtn"><i class="bi bi-camera-video me-1"></i>Start scanning</button>
+        <button type="button" class="btn btn-outline-secondary d-none" id="stopBtn"><i class="bi bi-x-circle me-1"></i>Stop camera</button>
+      </div>
+      <details class="mt-3">
+        <summary class="small">Camera not working? Enter the code manually</summary>
+        <form id="manualForm" class="mt-2" novalidate>
+          <label for="manualCode" class="form-label small">Code shown under the QR</label>
+          <input type="text" class="form-control mb-2" id="manualCode" autocomplete="off" placeholder="NXR1.…">
+          <button type="submit" class="btn btn-outline-secondary btn-sm">Submit code</button>
+        </form>
+      </details>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="nx-card p-3 p-md-4 mb-3" aria-live="polite">
+      <h2 class="h6">Result</h2>
+      <div id="result" class="text-muted">Nothing scanned yet.</div>
+    </div>
+    <div class="nx-card p-3 p-md-4">
+      <h2 class="h6">Before you scan</h2>
+      <ul class="small text-muted ps-3 mb-0">
+        <li>Allow <strong>camera</strong> and <strong>location</strong> when your browser asks. If you tapped "Block", open the lock icon in the address bar and allow them.</li>
+        <li>Stay inside the classroom; your distance is checked by the server.</li>
+        <li>Use the code that is on screen now. Codes expire after a short time.</li>
+        <li>Phones need HTTPS for camera and location (localhost works on the same computer).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+{% endblock %}

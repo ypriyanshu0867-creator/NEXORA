@@ -1,0 +1,16 @@
+{% extends "layouts/app.html" %}
+{% block title %}{{ notice.title }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('notices.index') }}" class="small"><i class="bi bi-arrow-left"></i> All notices</a></p>
+<article class="nx-card p-3 p-md-4">
+  <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+    <h1 class="h4 mb-0">{% if notice.is_pinned %}<i class="bi bi-pin-angle-fill text-primary me-1"></i>{% endif %}{{ notice.title }}</h1>
+    <div><span class="badge text-bg-light text-capitalize">{{ notice.category }}</span>{% if notice.expired %} <span class="badge text-bg-secondary">Expired</span>{% endif %}</div>
+  </div>
+  <div class="small text-muted mb-3">Published {{ notice.published.strftime('%d %b %Y') }}{% if notice.expires_at %} · Expires {{ notice.expires_at.strftime('%d %b %Y') }}{% endif %}{% if notice.deadline_at %} · Deadline {{ notice.deadline_at.strftime('%d %b %Y %H:%M') }} UTC{% endif %}</div>
+  <div class="nx-prewrap">{{ notice.body }}</div>
+  {% if notice.has_attachment %}
+    <hr><a class="btn btn-outline-secondary" href="{{ url_for('notices.attachment', notice_id=notice.id) }}"><i class="bi bi-file-earmark-pdf me-1"></i>Download attachment</a>
+  {% endif %}
+</article>
+{% endblock %}

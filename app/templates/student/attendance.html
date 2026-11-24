@@ -1,0 +1,48 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, stat_card, empty_state %}
+{% block title %}My Attendance{% endblock %}
+{% block content %}
+{{ page_header('My attendance', 'Calculated from sessions that were actually held.') }}
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-pie-chart', 'Overall attendance', (summary.overall_percent ~ '%') if summary.overall_percent is not none else 'No sessions yet') }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-check2-circle', 'Sessions attended', summary.attended, 'teal') }}</div>
+  <div class="col-sm-6 col-xl-3">{{ stat_card('bi-calendar-event', 'Sessions held', summary.conducted, 'indigo') }}</div>
+  <div class="col-sm-6 col-xl-3 d-flex"><a class="btn btn-nx w-100 d-flex align-items-center justify-content-center" href="{{ url_for('attendance.scan') }}"><i class="bi bi-qr-code-scan me-2"></i>Scan QR</a></div>
+</div>
+
+<div class="nx-card mb-4">
+  <div class="nx-card-head"><h2 class="h6 mb-0">Subject-wise</h2></div>
+  {% if summary.subjects %}
+  <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+    <thead><tr><th scope="col">Subject</th><th scope="col">Attended</th><th scope="col" class="nx-col-bar">Progress</th><th scope="col" class="text-end">%</th></tr></thead>
+    <tbody>
+    {% for s in summary.subjects %}
+      <tr>
+        <td><span class="fw-semibold">{{ s.code }}</span> · {{ s.name }}</td>
+        <td>{{ s.attended }} / {{ s.conducted }}</td>
+        <td><div class="progress nx-progress" role="progressbar" aria-label="{{ s.code }} attendance" aria-valuenow="{{ s.percent or 0 }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-width="{{ s.percent or 0 }}"></div></div></td>
+        <td class="text-end">{{ (s.percent ~ '%') if s.percent is not none else '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}{{ empty_state('bi-journal-x', 'No subjects', 'You are not enrolled in any subjects yet.') }}{% endif %}
+</div>
+
+<div class="nx-card">
+  <div class="nx-card-head"><h2 class="h6 mb-0">Recent sessions</h2><span class="small text-muted">Dates shown in your local time</span></div>
+  {% if history %}
+  <div class="table-responsive"><table class="table nx-table align-middle mb-0">
+    <thead><tr><th scope="col">Date</th><th scope="col">Subject</th><th scope="col">Status</th></tr></thead>
+    <tbody>
+    {% for h in history %}
+      <tr>
+        <td><time class="js-local-time" datetime="{{ h.date }}">{{ h.started_at.strftime('%d %b %Y %H:%M') }} UTC</time></td>
+        <td>{{ h.subject_code }} · {{ h.subject_name }}</td>
+        <td><span class="badge {{ 'text-bg-success' if h.status == 'Present' else 'text-bg-danger' }}">{{ h.status }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}{{ empty_state('bi-calendar-x', 'No sessions yet', 'Sessions will appear here after your teachers hold them.') }}{% endif %}
+</div>
+{% endblock %}

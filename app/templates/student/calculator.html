@@ -1,0 +1,58 @@
+{% extends "layouts/app.html" %}
+{% from "components/macros.html" import page_header, empty_state %}
+{% block title %}GPA Calculator{% endblock %}
+{% block content %}
+{{ page_header('SGPA / CGPA calculator', 'Credits come from your department\'s subjects; grades and grade points come from the institution\'s grading scheme.') }}
+{% if not data.scheme %}
+  <div class="nx-card">{{ empty_state('bi-gear', 'Grading scheme not configured', 'The institution has not configured a grading scheme yet, so GPA cannot be calculated. Please ask the administrator to set one.') }}</div>
+{% else %}
+<div id="calcApp" data-decimals="{{ data.decimals }}" class="row g-4">
+  <div class="col-lg-6">
+    <div class="nx-card p-3 p-md-4 mb-4">
+      <h2 class="h6">1. SGPA for a semester</h2>
+      <p class="small text-muted">Pick a semester, choose a grade for each subject you want included, then calculate. Subjects left as "not taken" are excluded and listed.</p>
+      <label for="semSelect" class="form-label">Semester</label>
+      <select id="semSelect" class="form-select mb-3">
+        {% for n in range(1, 9) %}<option value="{{ n }}">Semester {{ n }}</option>{% endfor %}
+      </select>
+      <div id="subjectRows" class="mb-3"></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-nx" id="calcSgpa">Calculate SGPA</button>
+        <button type="button" class="btn btn-outline-secondary" id="calcCgpaHypo" title="Official results plus the grades chosen above">CGPA including these grades</button>
+      </div>
+    </div>
+
+    <div class="nx-card p-3 p-md-4">
+      <h2 class="h6">2. Manual entry (any subjects)</h2>
+      <p class="small text-muted">For subjects not listed, enter credits (above 0, up to 30) and a grade from the scheme.</p>
+      <div id="manualRows" class="mb-2"></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="addRow"><i class="bi bi-plus-lg"></i> Add subject</button>
+        <button type="button" class="btn btn-nx btn-sm" id="manualSgpa">Calculate SGPA</button>
+        <button type="button" class="btn btn-nx btn-sm" id="manualCgpa">Calculate CGPA</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="nx-card p-3 p-md-4 mb-4">
+      <h2 class="h6">3. CGPA from your official results</h2>
+      <p class="small text-muted">Uses every published result. Repeat policy: <strong>{{ data.repeat_policy }}</strong> attempt counts. Semester SGPAs are never averaged.</p>
+      <button type="button" class="btn btn-nx" id="calcCgpa">Calculate official CGPA</button>
+    </div>
+    <div class="nx-card p-3 p-md-4 mb-4" aria-live="polite">
+      <h2 class="h6">Result</h2>
+      <div id="calcResult" class="text-muted">Nothing calculated yet.</div>
+    </div>
+    <div class="nx-card p-3 p-md-4">
+      <h2 class="h6">Grading scheme: {{ data.scheme.name }}</h2>
+      <div class="table-responsive"><table class="table table-sm mb-0">
+        <thead><tr><th scope="col">Grade</th><th scope="col">Range</th><th scope="col" class="text-end">Grade points</th><th scope="col">Pass</th></tr></thead>
+        <tbody>{% for g in data.scheme.grades %}<tr><td>{{ g.label }}</td><td>{{ g.range }}</td><td class="text-end">{{ g.grade_point }}</td><td>{{ 'Yes' if g.pass else 'No' }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if data.scheme %}<script src="{{ url_for('static', filename='js/calculator.js') }}"></script>{% endif %}{% endblock %}
