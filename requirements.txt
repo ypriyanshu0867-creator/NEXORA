@@ -6,3 +6,4 @@ python-dotenv==1.0.1
 qrcode[pil]==7.4.2
 cryptography==42.0.8
 pytest==8.2.2
+gunicorn==27.0.1
