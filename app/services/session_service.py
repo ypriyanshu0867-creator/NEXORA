@@ -153,7 +153,7 @@ def _owned_session(teacher_id, session_id, for_update=False):
     sql = _SESSION_SELECT + "WHERE s.id = %s AND ts.teacher_id = %s"
 
     if for_update:
-        sql += " FOR UPDATE OF s"
+       sql += " FOR UPDATE"
 
     return query_one(sql, (session_id, teacher_id))
 

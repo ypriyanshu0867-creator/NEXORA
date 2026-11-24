@@ -81,7 +81,7 @@ def mark_attendance(student, raw_qr, body, device_hash, ip):
 
             live = query_one("SELECT status, session_ends_at, geofence_enabled, geo_latitude, geo_longitude, "
                              "geo_radius_m, geo_min_accuracy_m FROM attendance_sessions "
-                             "WHERE id = %s FOR SHARE", (sid,))
+                             "WHERE id = %s FOR UPDATE", (sid,))
             if live["status"] != "active" or live["session_ends_at"] <= now:
                 raise ServiceError("session_closed", "This attendance session has ended.", 409, session_id=sid)
             if row["token_expires_at"] <= now:
